@@ -1,93 +1,473 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
-import { QrCode, UserPlus, DoorClosed, Users, ArrowRight } from "lucide-react"
+import { useSelector } from "react-redux"
+import {
+  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, Area, AreaChart, Legend
+} from "recharts"
+import {
+  QrCode, UserPlus, DoorClosed, Users, CheckCircle, Clock,
+  Shield, TrendingUp, Search, ArrowRight, MoreVertical, Eye
+} from "lucide-react"
 import QRCodeModal from "../components/QRCodeModal"
+import { fetchVisitsForApprovalApi } from "../services/approvalApi"
 
+/* ─── helpers ─── */
+const getImageUrl = (image) => {
+  if (!image) return null;
+  const str = image.toString().trim();
+  const match = str.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  let id = match ? match[1] : null;
+  if (!id && /^[a-zA-Z0-9_-]{20,}$/.test(str)) {
+    id = str;
+  }
+  if (id) return `https://drive.google.com/uc?export=view&id=${id}`;
+  if (str.startsWith("http") || str.startsWith("data:image")) return str;
+  return null;
+};
+const getStatusValue = (v) => {
+  const s = (v.approval_status || v.status || v.status_1 || "").toString().toLowerCase().trim()
+  if (s === "approved") return "Approved"
+  if (s === "rejected") return "Rejected"
+  return "Pending"
+}
+
+const last7Days = () => {
+  const days = []
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date()
+    d.setDate(d.getDate() - i)
+    days.push(d.toDateString())
+  }
+  return days
+}
+
+const fmt = (d) => {
+  if (!d) return "—"
+  const date = new Date(d)
+  if (isNaN(date)) return d?.toString().split(",")[0] || "—"
+  return date.toLocaleDateString("en-IN", { day: "2-digit", month: "short" })
+}
+
+/* ─── badge ─── */
+const Badge = ({ status }) => {
+  if (status === "Approved") return (
+    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full">
+      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" /> Approved
+    </span>
+  )
+  if (status === "Rejected") return (
+    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-500 bg-red-50 px-2.5 py-0.5 rounded-full">
+      <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" /> Rejected
+    </span>
+  )
+  return (
+    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 bg-amber-50 px-2.5 py-0.5 rounded-full">
+      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" /> Pending
+    </span>
+  )
+}
+
+/* ─── custom tooltip ─── */
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white border border-gray-100 shadow-lg rounded-xl px-4 py-3 text-xs">
+        <p className="font-bold text-gray-700 mb-1">{label}</p>
+        {payload.map((p, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full" style={{ background: p.color }} />
+            <span className="text-gray-500">{p.name}:</span>
+            <span className="font-bold text-gray-800">{p.value}</span>
+          </div>
+        ))}
+      </div>
+    )
+  }
+  return null
+}
+
+/* ══════════════════════════════════════════════════
+   MAIN COMPONENT
+══════════════════════════════════════════════════ */
 const HomePage = () => {
   const navigate = useNavigate()
+  const { userData } = useSelector((state) => state.login)
   const [isQRModalOpen, setIsQRModalOpen] = useState(false)
+  const [visits, setVisits] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState("")
 
-  const tasks = [
+  /* ─── fetch ─── */
+  const fetchData = async () => {
+    const res = await fetchVisitsForApprovalApi("admin")
+    if (res.success) setVisits(res.visits)
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    fetchData()
+    const id = setInterval(fetchData, 30000)
+    return () => clearInterval(id)
+  }, [])
+
+  /* ─── derived stats ─── */
+  const stats = useMemo(() => {
+    const approved = visits.filter(v => getStatusValue(v) === "Approved").length
+    const pending = visits.filter(v => getStatusValue(v) === "Pending").length
+    const rejected = visits.filter(v => getStatusValue(v) === "Rejected").length
+    const open = visits.filter(v => !v.gate_pass_closed).length
+    return { total: visits.length, approved, pending, rejected, open }
+  }, [visits])
+
+  /* ─── bar chart: visitors per day (last 7) ─── */
+  const barData = useMemo(() => {
+    const days = last7Days()
+    return days.map(day => {
+      const dayVisits = visits.filter(v => {
+        try { return new Date(v.timestamp || v.date_of_visit || "").toDateString() === day }
+        catch { return false }
+      })
+      const label = new Date(day).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })
+      return {
+        date: label,
+        Visitors: dayVisits.length,
+        Approved: dayVisits.filter(v => getStatusValue(v) === "Approved").length,
+      }
+    })
+  }, [visits])
+
+  /* ─── line chart: cumulative by day ─── */
+  const lineData = useMemo(() => {
+    const days = last7Days()
+    let cum = 0
+    return days.map(day => {
+      const count = visits.filter(v => {
+        try { return new Date(v.timestamp || v.date_of_visit || "").toDateString() === day }
+        catch { return false }
+      }).length
+      cum += count
+      return {
+        date: new Date(day).toLocaleDateString("en-IN", { day: "2-digit", month: "short" }),
+        Total: cum,
+      }
+    })
+  }, [visits])
+
+  /* ─── table data ─── */
+  const tableData = useMemo(() => {
+    const q = search.toLowerCase()
+    return visits
+      .filter(v =>
+        !q ||
+        (v.visitor_name || "").toLowerCase().includes(q) ||
+        (v.person_to_meet || "").toLowerCase().includes(q) ||
+        (v.mobile_number || "").includes(q)
+      )
+      .slice(0, 12)
+  }, [visits, search])
+
+  const statCards = [
     {
-      title: "Request Visit",
-      subtitle: "विज़िट का अनुरोध",
-      icon: <UserPlus className="text-white" size={24} />,
-      color: "bg-sky-500",
-      path: "/dashboard/assign-task",
-      description: "Fill visitor details and capture photo"
+      label: "Total Visitors",
+      value: stats.total,
+      icon: <Users size={18} className="text-sky-500" />,
+      iconBg: "bg-sky-50",
+      trend: "+Live",
+      trendColor: "text-emerald-500"
     },
     {
-      title: "Close Gate Pass",
-      subtitle: "गेट पास बंद करें",
-      icon: <DoorClosed className="text-white" size={24} />,
-      color: "bg-red-500",
-      path: "/dashboard/close-gate-pass",
-      description: "Mark visitor as departed"
+      label: "Approved",
+      value: stats.approved,
+      icon: <CheckCircle size={18} className="text-emerald-500" />,
+      iconBg: "bg-emerald-50",
+      trend: stats.total ? `${Math.round(stats.approved / stats.total * 100)}%` : "0%",
+      trendColor: "text-emerald-500"
     },
     {
-      title: "Employee Status",
-      subtitle: "कर्मचारी",
-      icon: <Users className="text-white" size={24} />,
-      color: "bg-green-500",
-      path: "/dashboard/employee",
-      description: "Check employee presence/status"
-    }
+      label: "Pending",
+      value: stats.pending,
+      icon: <Clock size={18} className="text-amber-500" />,
+      iconBg: "bg-amber-50",
+      trend: stats.total ? `${Math.round(stats.pending / stats.total * 100)}%` : "0%",
+      trendColor: "text-amber-500"
+    },
+    {
+      label: "Gate Pass Open",
+      value: stats.open,
+      icon: <Shield size={18} className="text-violet-500" />,
+      iconBg: "bg-violet-50",
+      trend: "Active",
+      trendColor: "text-violet-500"
+    },
   ]
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        {/* Welcome Section */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-8 rounded-3xl border border-sky-100 shadow-xl shadow-sky-100/50 relative overflow-hidden">
-          <div className="relative z-10">
-            <h1 className="text-3xl font-bold text-gray-800">Welcome to GatePass!</h1>
-            <p className="text-gray-500 mt-2 max-w-md">Manage your visitors efficiently with our automated gate pass system.</p>
-            <button
-              onClick={() => setIsQRModalOpen(true)}
-              className="mt-6 flex items-center gap-2 px-6 py-3 bg-sky-500 text-white rounded-2xl font-bold hover:bg-sky-600 transition-all shadow-lg shadow-sky-200"
-            >
-              <QrCode size={20} />
-              Show Visitor QR
-            </button>
+    <div className="space-y-6 animate-in fade-in duration-500">
+
+      {/* ── Stat Cards ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {statCards.map((c, i) => (
+          <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-4">
+            <div className={`${c.iconBg} w-11 h-11 rounded-xl flex items-center justify-center shrink-0`}>
+              {c.icon}
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 font-medium">{c.label}</p>
+              <div className="flex items-end gap-2">
+                <span className="text-2xl font-extrabold text-gray-800 leading-none">
+                  {loading ? "—" : c.value}
+                </span>
+                <span className={`text-xs font-bold mb-0.5 ${c.trendColor} flex items-center gap-0.5`}>
+                  <TrendingUp size={10} /> {c.trend}
+                </span>
+              </div>
+            </div>
           </div>
-          <div className="hidden md:block">
-            <img src="/botivate_logo.jpg" alt="Logo" className="h-24 w-auto rounded-2xl border border-gray-100 p-2" />
+        ))}
+      </div>
+
+      {/* ── Charts Row ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+        {/* Bar Chart */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-1">
+            <div>
+              <h2 className="text-sm font-bold text-gray-800">Visitor Activity</h2>
+              <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-2">
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-sky-500 inline-block" /> Visitors</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-emerald-400 inline-block" /> Approved</span>
+              </p>
+            </div>
+            <span className="text-xs text-gray-400 font-medium">Last 7 Days</span>
           </div>
-          {/* Decorative background element */}
-          <div className="absolute -right-12 -top-12 w-48 h-48 bg-sky-50 rounded-full opacity-50 blur-3xl"></div>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={barData} barCategoryGap="35%" barGap={3}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+              <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: "#f8fafc" }} />
+              <Bar dataKey="Visitors" fill="#38bdf8" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Approved" fill="#34d399" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
 
-        {/* Quick Actions Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {tasks.map((task, index) => (
-            <button
-              key={index}
-              onClick={() => navigate(task.path)}
-              className="group text-left p-6 bg-white rounded-3xl border border-sky-50 shadow-lg hover:shadow-2xl hover:border-sky-200 transition-all duration-300 relative overflow-hidden"
-            >
-              <div className={`${task.color} w-14 h-14 rounded-2xl flex items-center justify-center mb-6 shadow-lg transition-transform group-hover:scale-110 duration-300`}>
-                {task.icon}
-              </div>
-              <h3 className="text-xl font-bold text-gray-800">{task.title}</h3>
-              <p className="text-sm font-semibold text-sky-600 mt-1">{task.subtitle}</p>
-              <p className="text-xs text-gray-400 mt-4 leading-relaxed">{task.description}</p>
-              
-              <div className="mt-6 flex items-center gap-2 text-sky-500 font-bold text-sm">
-                <span>Launch</span>
-                <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-              </div>
+        {/* Area Chart */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-1">
+            <div>
+              <h2 className="text-sm font-bold text-gray-800">Cumulative Visits</h2>
+              <p className="text-xs text-gray-400 mt-0.5">Running total by day</p>
+            </div>
+            <span className="text-xs text-gray-400 font-medium">Last 7 Days</span>
+          </div>
+          <ResponsiveContainer width="100%" height={200}>
+            <AreaChart data={lineData}>
+              <defs>
+                <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#818cf8" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="#818cf8" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+              <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+              <Tooltip content={<CustomTooltip />} />
+              <Area type="monotone" dataKey="Total" stroke="#818cf8" strokeWidth={2} fill="url(#colorTotal)" dot={{ r: 3, fill: "#818cf8", strokeWidth: 0 }} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
 
-              {/* Hover effect background */}
-              <div className={`absolute right-0 bottom-0 w-24 h-24 ${task.color} opacity-[0.03] rounded-tl-full transition-all group-hover:scale-150`}></div>
+      {/* ── Visitor Table ── */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
+        {/* Table header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-gray-50">
+          <h2 className="text-sm font-bold text-gray-800">
+            All Visitors <span className="text-gray-400 font-medium">({visits.length})</span>
+          </h2>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="relative flex-1 sm:flex-none">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search visitor..."
+                className="pl-9 pr-4 py-2 text-xs bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:border-sky-300 focus:bg-white transition-all w-full sm:w-48"
+              />
+            </div>
+            <button
+              onClick={() => navigate("/dashboard/reports")}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-sky-600 bg-sky-50 rounded-xl hover:bg-sky-100 transition-all whitespace-nowrap"
+            >
+              <Eye size={13} /> View All
             </button>
-          ))}
+            <button
+              onClick={() => navigate("/dashboard/assign-task")}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-sky-500 rounded-xl hover:bg-sky-600 transition-all whitespace-nowrap"
+            >
+              <UserPlus size={13} /> New Visit
+            </button>
+          </div>
         </div>
 
-      <QRCodeModal 
-        isOpen={isQRModalOpen} 
-        onClose={() => setIsQRModalOpen(false)} 
-      />
+        {/* ── Mobile: Card List ── */}
+        <div className="block md:hidden divide-y divide-gray-50">
+          {loading ? (
+            <div className="flex flex-col items-center gap-2 py-12 text-gray-400">
+              <div className="w-6 h-6 border-2 border-sky-200 border-t-sky-500 rounded-full animate-spin" />
+              <span className="text-xs">Loading visitors...</span>
+            </div>
+          ) : tableData.length === 0 ? (
+            <div className="flex flex-col items-center py-12 text-gray-400">
+              <Users size={28} className="mb-2 opacity-30" />
+              <span className="text-xs">No visitors found</span>
+            </div>
+          ) : (
+            tableData.map((v, i) => {
+              const status = getStatusValue(v)
+              return (
+                <div key={i} className="flex items-start gap-3 px-4 py-4 hover:bg-gray-50 transition-colors">
+                  {/* Avatar / Photo */}
+                  <div className="w-9 h-9 rounded-full overflow-hidden border border-gray-100 bg-sky-100 flex items-center justify-center shrink-0">
+                    {getImageUrl(v.visitor_photo) ? (
+                      <img
+                        src={getImageUrl(v.visitor_photo)}
+                        alt={v.visitor_name || 'Visitor'}
+                        className="w-full h-full object-cover"
+                        onError={e => { e.target.style.display='none'; e.target.parentNode.querySelector('span')?.style && (e.target.parentNode.querySelector('span').style.display='flex'); }}
+                      />
+                    ) : null}
+                    <span className={`text-sky-600 font-bold text-sm ${getImageUrl(v.visitor_photo) ? 'hidden' : 'flex'} items-center justify-center w-full h-full`}>
+                      {(v.visitor_name || v.name || "V").charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-bold text-gray-800 truncate">{v.visitor_name || v.name || "—"}</span>
+                      <Badge status={status} />
+                    </div>
+                    <div className="text-xs text-gray-400 mt-0.5 truncate">
+                      {v.person_to_meet ? `Meeting: ${v.person_to_meet}` : ""}
+                      {v.mobile_number ? ` · ${v.mobile_number}` : ""}
+                    </div>
+                    <div className="flex items-center gap-3 mt-1.5">
+                      <span className="text-[11px] text-gray-400">{fmt(v.timestamp || v.date_of_visit)}</span>
+                      {v.gate_pass_closed
+                        ? <span className="text-[10px] font-semibold text-gray-400">● Closed</span>
+                        : <span className="text-[10px] font-semibold text-violet-500">● Open</span>
+                      }
+                    </div>
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
+
+        {/* ── Desktop: Table ── */}
+        <div className="hidden md:block overflow-x-auto max-h-[420px] overflow-y-auto">
+          <table className="w-full text-xs">
+            <thead className="sticky top-0 z-10 bg-white">
+              <tr className="text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">
+                <th className="px-6 py-3 text-left">Visitor</th>
+                <th className="px-4 py-3 text-left">Mobile</th>
+                <th className="px-4 py-3 text-left hidden lg:table-cell">Person to Meet</th>
+                <th className="px-4 py-3 text-left hidden lg:table-cell">Purpose</th>
+                <th className="px-4 py-3 text-left hidden lg:table-cell">Date</th>
+                <th className="px-4 py-3 text-left">Status</th>
+                <th className="px-4 py-3 text-left">Gate Pass</th>
+                <th className="px-4 py-3" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {loading ? (
+                <tr>
+                  <td colSpan={8} className="px-6 py-12 text-center text-gray-400">
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-6 h-6 border-2 border-sky-200 border-t-sky-500 rounded-full animate-spin" />
+                      Loading visitors...
+                    </div>
+                  </td>
+                </tr>
+              ) : tableData.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-6 py-12 text-center text-gray-400">
+                    <Users size={28} className="mx-auto mb-2 opacity-30" />
+                    No visitors found
+                  </td>
+                </tr>
+              ) : (
+                tableData.map((v, i) => {
+                  const status = getStatusValue(v)
+                  return (
+                    <tr key={i} className="hover:bg-gray-50/60 transition-colors group">
+                      <td className="px-6 py-3.5">
+                        <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-100 bg-sky-100 flex items-center justify-center shrink-0">
+                          {getImageUrl(v.visitor_photo) ? (
+                            <img
+                              src={getImageUrl(v.visitor_photo)}
+                              alt={v.visitor_name || 'Visitor'}
+                              className="w-full h-full object-cover"
+                              onError={e => { e.target.style.display='none'; e.target.parentNode.querySelector('span')?.style && (e.target.parentNode.querySelector('span').style.display='flex'); }}
+                            />
+                          ) : null}
+                          <span className={`text-sky-600 font-bold text-xs ${getImageUrl(v.visitor_photo) ? 'hidden' : 'flex'} items-center justify-center w-full h-full`}>
+                            {(v.visitor_name || v.name || "V").charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                          <span className="font-semibold text-gray-800 whitespace-nowrap">{v.visitor_name || v.name || "—"}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 text-gray-500 whitespace-nowrap">{v.mobile_number || v.phone || "—"}</td>
+                      <td className="px-4 py-3.5 hidden lg:table-cell">
+                        <span className="text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full text-[11px] font-medium whitespace-nowrap">
+                          {v.person_to_meet || "—"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 text-gray-500 hidden lg:table-cell max-w-[120px] truncate">{v.purpose_of_visit || v.purpose || "—"}</td>
+                      <td className="px-4 py-3.5 text-gray-400 hidden lg:table-cell whitespace-nowrap">{fmt(v.timestamp || v.date_of_visit)}</td>
+                      <td className="px-4 py-3.5"><Badge status={status} /></td>
+                      <td className="px-4 py-3.5">
+                        {v.gate_pass_closed
+                          ? <span className="text-[11px] font-semibold text-gray-400">● Closed</span>
+                          : <span className="text-[11px] font-semibold text-violet-500">● Open</span>
+                        }
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <button className="p-1 rounded-lg text-gray-300 hover:text-gray-500 hover:bg-gray-100 transition-all opacity-0 group-hover:opacity-100">
+                          <MoreVertical size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Footer */}
+        {!loading && tableData.length > 0 && (
+          <div className="px-4 sm:px-6 py-3 border-t border-gray-50 flex items-center justify-between">
+            <span className="text-xs text-gray-400">Showing {tableData.length} of {visits.length} records</span>
+            <button
+              onClick={() => navigate("/dashboard/reports")}
+              className="text-xs text-sky-500 font-bold hover:underline flex items-center gap-1"
+            >
+              View full report <ArrowRight size={12} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      <QRCodeModal isOpen={isQRModalOpen} onClose={() => setIsQRModalOpen(false)} />
     </div>
   )
 }

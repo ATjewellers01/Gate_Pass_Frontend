@@ -28,7 +28,9 @@ export const createVisitRequestApi = async (data) => {
     data.personToMeet,           // G: Person To Meet
     data.purposeOfVisit,         // H: Purpose of Visit
     data.timeOfEntry,            // I: Time of Entry
-    data.visitorAddress          // J: Visitor Address
+    data.visitorAddress,         // J: Visitor Address
+    "", "", "", "", "", "", "", "", // K, L, M, N, O, P, Q, R (Empty padding)
+    data.personToMeetContact || "" // S: Person To Meet Contact (Index 18)
   ];
 
   try {

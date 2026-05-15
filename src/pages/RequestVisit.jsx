@@ -45,6 +45,7 @@ const AssignTask = () => {
     visitorAddress: "",
     purposeOfVisit: "",
     personToMeet: "",
+    personToMeetContact: "",
     dateOfVisit: "",
     timeOfEntry: "",
   });
@@ -77,14 +78,22 @@ const AssignTask = () => {
         // Row 0 is header, so loop from index 1
         for (let i = 1; i < mastersData.length; i++) {
           const personName = mastersData[i][6]; // Column G (Index 6)
+          const personPhone = mastersData[i][7] || ""; // Column H (Index 7)
           if (personName && typeof personName === 'string' && personName.trim() !== '') {
-            options.push({ person_to_meet: personName.trim() });
+            options.push({ 
+              person_to_meet: personName.trim(),
+              phone: personPhone.toString().trim()
+            });
           }
         }
 
         // Remove duplicates just in case
-        const uniqueOptions = Array.from(new Set(options.map(o => o.person_to_meet)))
-          .map(name => ({ person_to_meet: name }));
+        const uniqueOptions = options.reduce((acc, curr) => {
+          if (!acc.find(item => item.person_to_meet === curr.person_to_meet)) {
+            acc.push(curr);
+          }
+          return acc;
+        }, []);
 
         setPersonToMeetOptions(uniqueOptions);
       } else {
@@ -210,6 +219,15 @@ const AssignTask = () => {
         }
       } catch (err) {
         // New visitor
+      }
+    }
+
+    if (name === "personToMeet") {
+      const selectedPerson = personToMeetOptions.find(p => p.person_to_meet === value);
+      if (selectedPerson) {
+        setFormData(prev => ({ ...prev, personToMeetContact: selectedPerson.phone }));
+      } else {
+        setFormData(prev => ({ ...prev, personToMeetContact: "" }));
       }
     }
   };
@@ -403,18 +421,35 @@ const AssignTask = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-gray-500 ml-1">Purpose of Visit</label>
-                    <div className="relative group">
-                      <FileText className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-sky-500 transition-colors" size={18} />
-                      <input
-                        type="text"
-                        name="purposeOfVisit"
-                        value={formData.purposeOfVisit}
-                        onChange={handleChange}
-                        placeholder="General Meeting"
-                        className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 transition-all outline-none text-sm font-medium"
-                      />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-sky-600 ml-1">Person to Meet Contact</label>
+                      <div className="relative group">
+                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-sky-400" size={18} />
+                        <input
+                          type="text"
+                          name="personToMeetContact"
+                          value={formData.personToMeetContact}
+                          readOnly
+                          placeholder="Contact"
+                          className="w-full pl-12 pr-4 py-3.5 bg-sky-50/30 border border-sky-100 rounded-2xl outline-none text-sm font-semibold text-sky-700 cursor-not-allowed"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-gray-500 ml-1">Purpose of Visit</label>
+                      <div className="relative group">
+                        <FileText className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-sky-500 transition-colors" size={18} />
+                        <input
+                          type="text"
+                          name="purposeOfVisit"
+                          value={formData.purposeOfVisit}
+                          onChange={handleChange}
+                          placeholder="General Meeting"
+                          className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 transition-all outline-none text-sm font-medium"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>

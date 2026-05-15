@@ -22,7 +22,10 @@ export const fetchVisitsForApprovalApi = async (personToMeet) => {
                 headers.forEach((header, i) => {
                     // Trim header and clean it for key mapping
                     const key = (header || "").toString().trim().toLowerCase().replace(/\s+/g, '_').replace(/\./g, '');
-                    obj[key] = row[i];
+                    if (key) obj[key] = row[i];
+                    
+                    // Force the first column to also be available as 'timestamp'
+                    if (i === 0) obj['timestamp'] = row[i];
                 });
                 return obj;
             });

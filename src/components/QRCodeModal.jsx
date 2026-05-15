@@ -32,16 +32,16 @@ const QRCodeModal = ({ isOpen, onClose }) => {
                         <X className="w-5 h-5" />
                     </button>
                 </div>
-                
+
                 <div className="p-8 flex flex-col items-center gap-6">
                     <div ref={qrRef} className="p-4 bg-white border-2 border-sky-100 rounded-2xl shadow-inner">
-                        <QRCodeCanvas 
-                            value={visitorUrl} 
+                        <QRCodeCanvas
+                            value={visitorUrl}
                             size={200}
                             level="H"
                             includeMargin={true}
                             imageSettings={{
-                                src: "/favicon.ico", // Or botivate_logo.jpg if available
+                                src: "/favicon.ico", // Or logo.png if available
                                 x: undefined,
                                 y: undefined,
                                 height: 40,
@@ -50,7 +50,7 @@ const QRCodeModal = ({ isOpen, onClose }) => {
                             }}
                         />
                     </div>
-                    
+
                     <div className="text-center">
                         <p className="text-sm font-medium text-gray-800 mb-1">Scan for Gate Pass</p>
                         <p className="text-xs text-gray-500 break-all">{visitorUrl}</p>
@@ -64,7 +64,7 @@ const QRCodeModal = ({ isOpen, onClose }) => {
                         Download QR Code
                     </button>
                 </div>
-                
+
                 <div className="bg-gray-50 p-4 text-center">
                     <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Botivate Technology</p>
                 </div>

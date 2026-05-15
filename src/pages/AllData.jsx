@@ -5,7 +5,7 @@ import { updateVisitApprovalApi } from "../services/approvalApi.js";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { logoutUser } from "../services/slice/loginSlice";
-import { User, Users, Eye, Search, Filter, Download, ChevronLeft, ChevronRight, CheckCircle, XCircle, Bell, LogOut, Clock, ArrowLeft, QrCode, UserCheck } from "lucide-react";
+import { User, Users, Eye, Search, Filter, Download, ChevronLeft, ChevronRight, CheckCircle, XCircle, Bell, LogOut, Clock, ArrowLeft, QrCode, UserCheck, Phone } from "lucide-react";
 import {
     fetchPersonsApi,
     createPersonApi,
@@ -39,6 +39,8 @@ const AdminAllVisits = ({ initialTab = "Visitors", hideTabs = false, readOnly = 
 
     const itemsPerPage = 10;
 
+    const getStatusStr = (v) => (v?.approval_status || v?.status || v?.status_1 || v?.status1 || "").toString().toLowerCase();
+
     const fetchData = async (isPolling = false) => {
         try {
             if (!isPolling) setLoading(true);
@@ -48,7 +50,7 @@ const AdminAllVisits = ({ initialTab = "Visitors", hideTabs = false, readOnly = 
             setData(visitors);
 
             // Check for new pending requests using ref to avoid stale closures
-            const currentPendingCount = visitors.filter(v => v.approval_status?.toLowerCase() === 'pending').length;
+            const currentPendingCount = visitors.filter(v => getStatusStr(v) === 'pending').length;
 
             if (isPolling && previousPendingRef.current !== null && currentPendingCount > previousPendingRef.current) {
                 showToast("New visitor request received!", "info");
@@ -160,8 +162,9 @@ const AdminAllVisits = ({ initialTab = "Visitors", hideTabs = false, readOnly = 
         );
     }
 
-    const getStatusBadge = (status) => {
-        switch (status?.toLowerCase()) {
+    const getStatusBadge = (v) => {
+        const status = getStatusStr(v);
+        switch (status) {
             case 'approved':
                 return <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">Approved</span>;
             case 'pending':
@@ -169,21 +172,31 @@ const AdminAllVisits = ({ initialTab = "Visitors", hideTabs = false, readOnly = 
             case 'rejected':
                 return <span className="px-2 py-1 bg-red-100 text-red-800 text-xs font-medium rounded-full">Rejected</span>;
             default:
-                return <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs font-medium rounded-full">{status || 'Unknown'}</span>;
+                return <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full">Pending</span>;
         }
     };
 
     const getImageUrl = (image) => {
-        if (!image) return "/user.png";
-
-        // If it's already a full URL (http/https), return as is
-        if (image.startsWith("http")) {
-            return image;
+        if (!image) return null;
+        const str = image.toString().trim();
+        
+        // Extract Google Drive file ID from full URL
+        const match = str.match(/\/d\/([a-zA-Z0-9_-]+)/);
+        let id = match ? match[1] : null;
+        
+        // If no full URL match, check if the string itself is just a raw Drive ID
+        if (!id && /^[a-zA-Z0-9_-]{20,}$/.test(str)) {
+            id = str;
         }
-
-        // For localStorage base64 images or any other string, return as is
-        // or default to user.png if it's not a valid image
-        return image;
+        
+        if (id) {
+            // Use the official Google Drive export URL which avoids recent 403 Forbidden errors
+            return `https://drive.google.com/uc?export=view&id=${id}`;
+        }
+        
+        // Already a direct URL or base64 data URI
+        if (str.startsWith("http") || str.startsWith("data:image")) return str;
+        return null;
     };
 
 
@@ -203,40 +216,42 @@ const AdminAllVisits = ({ initialTab = "Visitors", hideTabs = false, readOnly = 
                             </button>
                         )}
                         <div>
-                            <h1 className="text-lg sm:text-xl font-bold text-gray-800 leading-tight">
-                                {readOnly ? "Employee Status" : "Visitor Management"}
-                            </h1>
+                             <h1 className="text-lg sm:text-xl font-bold text-gray-800 leading-tight">
+                                {activeMainTab === "Employees" ? "Employee Status" : "Visitor Management"}
+                             </h1>
                             <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Comprehensive Reports</p>
                         </div>
                     </div>
 
-                    <div className="h-8 w-[1px] bg-sky-100 mx-2 hidden sm:block"></div>
-
-                    {/* Compact Tabs */}
-                    <div className="flex p-1 bg-sky-50/50 rounded-xl border border-sky-100 w-full sm:w-auto">
-                        <button
-                            onClick={() => setActiveMainTab("Visitors")}
-                            className={`flex-1 sm:flex-none px-4 py-1.5 rounded-lg font-bold text-[10px] sm:text-[11px] transition-all flex items-center justify-center gap-2 ${
-                                activeMainTab === "Visitors"
-                                    ? "bg-sky-500 text-white shadow-md shadow-sky-100"
-                                    : "text-gray-500 hover:bg-white"
-                            }`}
-                        >
-                            <Users size={12} />
-                            Visitors
-                        </button>
-                        <button
-                            onClick={() => setActiveMainTab("Employees")}
-                            className={`flex-1 sm:flex-none px-4 py-1.5 rounded-lg font-bold text-[10px] sm:text-[11px] transition-all flex items-center justify-center gap-2 ${
-                                activeMainTab === "Employees"
-                                    ? "bg-sky-500 text-white shadow-md shadow-sky-100"
-                                    : "text-gray-500 hover:bg-white"
-                            }`}
-                        >
-                            <UserCheck size={12} />
-                            Employees
-                        </button>
-                    </div>
+                    {!hideTabs && (
+                        <>
+                            <div className="h-8 w-[1px] bg-sky-100 mx-2 hidden sm:block"></div>
+                            <div className="flex p-1 bg-sky-50/50 rounded-xl border border-sky-100 w-full sm:w-auto">
+                                <button
+                                    onClick={() => setActiveMainTab("Visitors")}
+                                    className={`flex-1 sm:flex-none px-4 py-1.5 rounded-lg font-bold text-[10px] sm:text-[11px] transition-all flex items-center justify-center gap-2 ${
+                                        activeMainTab === "Visitors"
+                                            ? "bg-sky-500 text-white shadow-md shadow-sky-100"
+                                            : "text-gray-500 hover:bg-white"
+                                    }`}
+                                >
+                                    <Users size={12} />
+                                    Visitors
+                                </button>
+                                <button
+                                    onClick={() => setActiveMainTab("Employees")}
+                                    className={`flex-1 sm:flex-none px-4 py-1.5 rounded-lg font-bold text-[10px] sm:text-[11px] transition-all flex items-center justify-center gap-2 ${
+                                        activeMainTab === "Employees"
+                                            ? "bg-sky-500 text-white shadow-md shadow-sky-100"
+                                            : "text-gray-500 hover:bg-white"
+                                    }`}
+                                >
+                                    <UserCheck size={12} />
+                                    Employees
+                                </button>
+                            </div>
+                        </>
+                    )}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3">
@@ -320,19 +335,19 @@ const AdminAllVisits = ({ initialTab = "Visitors", hideTabs = false, readOnly = 
                         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
                             <div className="text-sm text-gray-600 mb-1">Pending</div>
                             <div className="text-2xl font-bold text-yellow-600">
-                                {data.filter(v => v.approval_status?.toLowerCase() === 'pending').length}
+                                {data.filter(v => getStatusStr(v) === 'pending').length}
                             </div>
                         </div>
                         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
                             <div className="text-sm text-gray-600 mb-1">Approved</div>
                             <div className="text-2xl font-bold text-green-600">
-                                {data.filter(v => v.approval_status?.toLowerCase() === 'approved').length}
+                                {data.filter(v => getStatusStr(v) === 'approved').length}
                             </div>
                         </div>
                         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
                             <div className="text-sm text-gray-600 mb-1">Rejected</div>
                             <div className="text-2xl font-bold text-red-600">
-                                {data.filter(v => v.approval_status?.toLowerCase() === 'rejected').length}
+                                {data.filter(v => getStatusStr(v) === 'rejected').length}
                             </div>
                         </div>
                     </div>
@@ -365,9 +380,9 @@ const AdminAllVisits = ({ initialTab = "Visitors", hideTabs = false, readOnly = 
                         {/* Desktop Table */}
                         <div className="hidden lg:block">
                             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                                <div className="overflow-x-auto">
+                                <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
                                     <table className="min-w-full divide-y divide-gray-200">
-                                        <thead className="bg-gray-50">
+                                        <thead className="bg-gray-50 sticky top-0 z-10">
                                             <tr>
                                                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Visitor Details</th>
                                                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Visit Info</th>
@@ -380,8 +395,11 @@ const AdminAllVisits = ({ initialTab = "Visitors", hideTabs = false, readOnly = 
                                                 <tr key={v.id} className="hover:bg-gray-50 transition-colors">
                                                     <td className="px-6 py-4">
                                                         <div className="flex items-center">
-                                                            <div className="w-12 h-12 rounded-lg border border-gray-200 overflow-hidden cursor-pointer mr-4" onClick={() => handleImageClick(getImageUrl(v.visitor_photo))}>
-                                                                <img src={getImageUrl(v.visitor_photo)} alt={v.visitor_name} className="w-full h-full object-cover" onError={(e) => { e.target.onerror = null; e.target.src = "/user.png"; }} />
+                                                            <div className="w-12 h-12 rounded-lg border border-gray-200 overflow-hidden cursor-pointer mr-4 bg-sky-100 flex items-center justify-center" onClick={() => handleImageClick(getImageUrl(v.visitor_photo))}>
+                                                                {getImageUrl(v.visitor_photo) ? (
+                                                                    <img src={getImageUrl(v.visitor_photo)} alt={v.visitor_name} className="w-full h-full object-cover" onError={(e) => { e.target.style.display='none'; e.target.parentNode.querySelector('span')?.style && (e.target.parentNode.querySelector('span').style.display='flex'); }} />
+                                                                ) : null}
+                                                                <span className={`text-sky-600 font-bold text-sm ${getImageUrl(v.visitor_photo) ? 'hidden' : 'flex'} items-center justify-center w-full h-full`}>{(v.visitor_name || "V").charAt(0).toUpperCase()}</span>
                                                             </div>
                                                             <div>
                                                                 <div className="font-medium text-gray-900">{v.visitor_name}</div>
@@ -393,13 +411,16 @@ const AdminAllVisits = ({ initialTab = "Visitors", hideTabs = false, readOnly = 
                                                     <td className="px-6 py-4 text-sm">
                                                         <div className="font-medium text-gray-900">Meeting: {v.person_to_meet}</div>
                                                         <div className="text-gray-600">Purpose: {v.purpose_of_visit || '-'}</div>
-                                                        <div className="text-xs text-gray-500 mt-1">{new Date(v.date_of_visit).toLocaleDateString("en-IN")}</div>
+                                                        <div className="text-xs text-gray-500 mt-1">
+                                                            {v.date_of_visit ? new Date(v.date_of_visit).toLocaleDateString("en-IN") : (v.timestamp ? v.timestamp.toString().split(',')[0] : 'N/A')}
+                                                        </div>
                                                     </td>
                                                     <td className="px-6 py-4">
-                                                        {getStatusBadge(v.approval_status)}
+                                                        {getStatusBadge(v)}
                                                         <div className="mt-1 text-xs text-gray-500">{v.gate_pass_closed ? 'Gate Pass Closed' : 'Gate Pass Open'}</div>
                                                     </td>
                                                     <td className="px-6 py-4 text-xs text-gray-600">
+                                                        <div className="font-medium text-sky-600 mb-1">Entry: {v.timestamp || "N/A"}</div>
                                                         {v.approved_by && <div>By: {v.approved_by}</div>}
                                                         {v.approved_at && <div>At: {new Date(v.approved_at).toLocaleString("en-IN")}</div>}
                                                     </td>
@@ -432,8 +453,9 @@ const AdminAllVisits = ({ initialTab = "Visitors", hideTabs = false, readOnly = 
                                         </div>
                                     </div>
                                     <div className="space-y-1 text-sm text-gray-600">
+                                        <div className="text-sky-600 font-bold">Entry: {v.timestamp || "N/A"}</div>
                                         <div><strong>Meeting:</strong> {v.person_to_meet}</div>
-                                        <div><strong>Status:</strong> {getStatusBadge(v.approval_status)}</div>
+                                        <div><strong>Status:</strong> {getStatusBadge(v)}</div>
                                     </div>
                                 </div>
                             ))}
@@ -449,9 +471,9 @@ const AdminAllVisits = ({ initialTab = "Visitors", hideTabs = false, readOnly = 
                     <div className="space-y-6">
                         {/* Desktop Table - Employees */}
                         <div className="hidden lg:block bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                            <div className="overflow-x-auto">
+                            <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
                                 <table className="min-w-full divide-y divide-gray-200">
-                                    <thead className="bg-gray-50">
+                                    <thead className="bg-gray-50 sticky top-0 z-10">
                                         <tr>
                                             <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Employee Name</th>
                                             <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Phone</th>

@@ -243,9 +243,9 @@ const GatePassClosure = () => {
             </div>
         {/* Table Container - Desktop only */}
         <div className="hidden lg:block bg-white rounded-3xl border border-sky-50 shadow-xl overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
             <table className="w-full text-left border-collapse">
-              <thead>
+              <thead className="sticky top-0 z-10">
                 <tr className="bg-sky-50/50">
                   <th className="px-6 py-4 text-xs font-bold text-sky-700 uppercase tracking-wider text-left">Actions</th>
                   <th className="px-6 py-4 text-xs font-bold text-sky-700 uppercase tracking-wider">Pass ID</th>
