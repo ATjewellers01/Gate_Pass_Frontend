@@ -1,31 +1,12 @@
-const SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export const fetchPersonsApi = async () => {
     try {
-        const response = await fetch(`${SCRIPT_URL}?action=getMasters`);
+        const response = await fetch(`${API_BASE_URL}/api/data`);
         const result = await response.json();
-
-        if (result.status === "success" && Array.isArray(result.data)) {
-            const mastersData = result.data;
-            const persons = [];
-            
-            // Row 0 is header, so loop from index 1
-            for (let i = 1; i < mastersData.length; i++) {
-                const row = mastersData[i];
-                // Column G (Index 6) is Name, Column H (Index 7) is Phone
-                const name = row[6];
-                const phone = row[7];
-                
-                if (name && name.trim() !== '') {
-                    persons.push({
-                        id: i,
-                        person_to_meet: name.trim(),
-                        phone: phone ? phone.toString().trim() : "N/A",
-                        status: "Available" // Default status as live availability is not yet in sheet
-                    });
-                }
-            }
-            return { data: persons };
+        
+        if (response.ok && result.data) {
+            return { data: result.data }; // Array of { id, person_to_meet, phone, status }
         }
         return { data: [] };
     } catch (error) {
@@ -35,37 +16,47 @@ export const fetchPersonsApi = async () => {
 };
 
 export const createPersonApi = async (payload) => {
-    return new Promise(resolve => {
-        setTimeout(() => {
-            // Mapping from personToMeet -> person_to_meet for consistency
-            const newPerson = savePerson({
-                person_to_meet: payload.personToMeet,
-                phone: payload.phone,
-                password: payload.password || ""
-            });
-            resolve({ data: newPerson });
-        }, 300);
-    });
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/data`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const result = await response.json();
+        if (response.ok) return { data: result.data };
+        return { error: result.error || "Failed to create person" };
+    } catch (error) {
+        console.error("Create person error:", error);
+        return { error: "Network error" };
+    }
 };
 
 export const updatePersonApi = async (id, payload) => {
-    return new Promise(resolve => {
-        setTimeout(() => {
-            const updated = updatePerson(id, {
-                person_to_meet: payload.personToMeet,
-                phone: payload.phone,
-                password: payload.password || ""
-            });
-            resolve({ data: updated });
-        }, 300);
-    });
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/data/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const result = await response.json();
+        if (response.ok) return { data: result.data };
+        return { error: result.error || "Failed to update person" };
+    } catch (error) {
+        console.error("Update person error:", error);
+        return { error: "Network error" };
+    }
 };
 
 export const deletePersonApi = async (id) => {
-    return new Promise(resolve => {
-        setTimeout(() => {
-            deletePerson(id);
-            resolve({ data: { success: true } });
-        }, 300);
-    });
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/data/${id}`, {
+            method: 'DELETE'
+        });
+        const result = await response.json();
+        if (response.ok) return { data: { success: true } };
+        return { error: result.error || "Failed to delete person" };
+    } catch (error) {
+        console.error("Delete person error:", error);
+        return { error: "Network error" };
+    }
 };

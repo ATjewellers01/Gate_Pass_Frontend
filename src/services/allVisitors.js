@@ -1,25 +1,20 @@
-import { fetchVisitsForApprovalApi } from "./approvalApi";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-export const fetchAllVisitorsApi = async () => {
+export const fetchAllVisitorsApi = async (personToMeet = "admin") => {
     try {
-        const res = await fetchVisitsForApprovalApi("admin");
-        if (res.success) {
-            // descending sort to show newest first
-            const sorted = res.visits.sort((a, b) => {
-                const dateA = new Date(a.timestamp || a.date_of_visit || 0);
-                const dateB = new Date(b.timestamp || b.date_of_visit || 0);
-                
-                // If invalid date, move to bottom
-                if (isNaN(dateA.getTime())) return 1;
-                if (isNaN(dateB.getTime())) return -1;
-                
-                return dateB - dateA;
-            });
-            return { data: sorted };
+        const url = personToMeet && personToMeet !== "admin" 
+            ? `${API_BASE_URL}/api/visits?personToMeet=${encodeURIComponent(personToMeet)}`
+            : `${API_BASE_URL}/api/visits`;
+            
+        const response = await fetch(url);
+        const result = await response.json();
+        
+        if (response.ok) {
+            return { data: result.data };
         }
         return { data: [] };
     } catch (error) {
-        console.error("Error fetching live visitors:", error);
+        console.error("Error fetching all visitors:", error);
         return { data: [] };
     }
 };

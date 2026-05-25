@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Camera,
   User,
@@ -24,6 +24,8 @@ import { fetchPersonsApi } from "../services/personApi";
 
 const AssignTask = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isPublic = location.pathname === "/public/request-gate-pass";
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState({ show: false, message: "", type: "" });
@@ -68,37 +70,9 @@ const AssignTask = () => {
   const fetchPersonToMeetOptions = async () => {
     setIsLoadingOptions(true);
     try {
-      const SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
-      const response = await fetch(`${SCRIPT_URL}?action=getMasters`);
-      const result = await response.json();
-
-      if (result.status === "success" && Array.isArray(result.data)) {
-        const mastersData = result.data;
-        const options = [];
-        // Row 0 is header, so loop from index 1
-        for (let i = 1; i < mastersData.length; i++) {
-          const personName = mastersData[i][6]; // Column G (Index 6)
-          const personPhone = mastersData[i][7] || ""; // Column H (Index 7)
-          if (personName && typeof personName === 'string' && personName.trim() !== '') {
-            options.push({ 
-              person_to_meet: personName.trim(),
-              phone: personPhone.toString().trim()
-            });
-          }
-        }
-
-        // Remove duplicates just in case
-        const uniqueOptions = options.reduce((acc, curr) => {
-          if (!acc.find(item => item.person_to_meet === curr.person_to_meet)) {
-            acc.push(curr);
-          }
-          return acc;
-        }, []);
-
-        setPersonToMeetOptions(uniqueOptions);
-      } else {
-        setPersonToMeetOptions([]);
-      }
+      const res = await fetchPersonsApi();
+      const persons = res.data || [];
+      setPersonToMeetOptions(persons);
     } catch (err) {
       setToast({ show: true, message: "Failed to load persons", type: "error" });
     } finally {
@@ -254,7 +228,26 @@ const AssignTask = () => {
     try {
       await createVisitRequestApi({ ...formData, photoFile });
       showToast("Visitor registered successfully!", "success");
-      setTimeout(() => navigate("/dashboard/close-gate-pass", { replace: true }), 1000);
+      // Reset form and stay on the same page
+      const now = new Date();
+      setFormData({
+        visitorName: "",
+        mobileNumber: "",
+        email: "",
+        visitorAddress: "",
+        purposeOfVisit: "",
+        personToMeet: "",
+        personToMeetContact: "",
+        dateOfVisit: now.toISOString().split("T")[0],
+        timeOfEntry: now.toTimeString().slice(0, 5),
+      });
+      setCapturedPhoto(null);
+      setPhotoFile(null);
+      openCamera(currentFacingMode);
+      
+      if (isPublic) {
+        showToast("Gate pass requested! You can close this window.", "success");
+      }
     } catch (err) {
       showToast("Submission failed", "error");
     } finally {
@@ -268,70 +261,64 @@ const AssignTask = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <UserPlus className="text-sky-500" />
-            Visitor Entry Form
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-3">
+            <UserPlus className="text-orange-500" size={28} />
+            Visitor Entry
           </h1>
-          <p className="text-gray-500 text-sm">Register a new visitor for gate entry</p>
+          <p className="text-gray-500 text-sm sm:text-base mt-1">Register a new visitor for gate entry</p>
         </div>
-        <button
-          onClick={() => navigate("/dashboard/quick-task")}
-          className="flex items-center gap-2 px-4 py-2 bg-white text-gray-600 hover:bg-gray-50 rounded-xl border border-gray-100 transition-all shadow-sm"
-        >
-          <ArrowLeft size={18} />
-          <span className="font-semibold text-sm">Back to Dashboard</span>
-        </button>
       </div>
 
-      <div className="bg-white rounded-3xl border border-sky-50 shadow-2xl overflow-hidden">
-        <form onSubmit={handleSubmit} className="divide-y divide-sky-50">
-          {/* Form Content */}
-          <div className="p-4 sm:p-8 lg:p-12 space-y-8 lg:space-y-10">
-            {/* Photo Section - Moved to top for better flow */}
-            <div className="flex flex-col lg:flex-row gap-6 lg:gap-10">
-              <div className="flex-1 space-y-4">
-                <h2 className="text-sm font-bold text-sky-700 uppercase tracking-widest flex items-center gap-2">
-                  <Camera size={16} /> Visitor Photo
+      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+        <form onSubmit={handleSubmit} className="divide-y divide-gray-100">
+          <div className="p-4 sm:p-6 space-y-6">
+            {/* Top Section: Photo & Basic Info */}
+            <div className="flex flex-col lg:flex-row gap-6">
+              
+              {/* Photo Capture */}
+              <div className="w-full lg:w-1/4 xl:w-1/5 space-y-4">
+                <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                  <Camera size={14} /> Visitor Photo
                 </h2>
-                <div className="relative aspect-video rounded-3xl bg-gray-900 overflow-hidden shadow-xl border-4 border-white ring-1 ring-sky-100">
+                <div className="relative aspect-video sm:aspect-[4/3] lg:aspect-[4/3] rounded-2xl bg-gray-100 overflow-hidden border border-gray-200 group">
                   {!capturedPhoto ? (
                     <>
                       <video ref={videoRef} autoPlay className="w-full h-full object-cover" />
                       <canvas ref={canvasRef} className="hidden" />
-                      <div className="absolute top-4 right-4 flex gap-2">
+                      <div className="absolute top-3 right-3">
                         <button
                           type="button"
                           onClick={switchCamera}
-                          className="bg-black/40 backdrop-blur-md text-white p-3 rounded-2xl hover:bg-black/60 transition-all border border-white/20"
+                          className="bg-white/80 backdrop-blur-sm text-gray-700 p-2 rounded-full hover:bg-white transition-colors shadow-sm"
                         >
-                          <SwitchCamera size={20} />
+                          <SwitchCamera size={18} />
                         </button>
                       </div>
-                      <div className="absolute bottom-6 left-0 right-0 flex justify-center">
+                      <div className="absolute inset-x-0 bottom-4 flex justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                         <button
                           type="button"
                           onClick={capturePhoto}
-                          className="flex items-center gap-2 px-8 py-3 bg-white text-gray-800 rounded-2xl font-bold shadow-2xl hover:scale-105 transition-all"
+                          className="flex items-center gap-2 px-6 py-2.5 bg-orange-500 text-white rounded-full font-medium shadow-lg hover:bg-orange-600 transition-colors text-sm"
                         >
-                          <Camera size={20} />
-                          Capture Photo
+                          <Camera size={16} />
+                          Capture
                         </button>
                       </div>
                     </>
                   ) : (
                     <>
                       <img src={capturedPhoto} alt="Captured" className="w-full h-full object-cover" />
-                      <div className="absolute bottom-6 left-0 right-0 flex justify-center">
+                      <div className="absolute inset-x-0 bottom-4 flex justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                         <button
                           type="button"
                           onClick={retakePhoto}
-                          className="flex items-center gap-2 px-8 py-3 bg-red-500 text-white rounded-2xl font-bold shadow-2xl hover:bg-red-600 transition-all"
+                          className="flex items-center gap-2 px-6 py-2.5 bg-white/90 backdrop-blur-sm text-gray-800 rounded-full font-medium shadow-lg hover:bg-white transition-colors text-sm"
                         >
-                          <RefreshCw size={20} />
-                          Retake Photo
+                          <RefreshCw size={16} />
+                          Retake
                         </button>
                       </div>
                     </>
@@ -339,55 +326,55 @@ const AssignTask = () => {
                 </div>
               </div>
 
-              {/* Personal Information */}
-              <div className="flex-1 space-y-6">
-                <h2 className="text-sm font-bold text-sky-700 uppercase tracking-widest flex items-center gap-2">
-                  <User size={16} /> Personal Details
+              {/* Personal Details */}
+              <div className="w-full lg:w-3/4 xl:w-4/5 space-y-4">
+                <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                  <User size={14} /> Personal Details
                 </h2>
 
-                <div className="space-y-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-gray-500 ml-1">Visitor Name*</label>
-                    <div className="relative group">
-                      <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-sky-500 transition-colors" size={18} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <label className="text-xs font-semibold text-gray-600">Visitor Name *</label>
+                    <div className="relative">
+                      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                       <input
                         type="text"
                         name="visitorName"
                         value={formData.visitorName}
                         onChange={handleChange}
-                        placeholder="John Doe"
-                        className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 transition-all outline-none text-sm font-medium"
+                        placeholder="e.g. John Doe"
+                        className="w-full pl-10 pr-4 py-2.5 bg-transparent border border-gray-200 rounded-xl focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all outline-none text-sm"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-gray-500 ml-1">Mobile Number*</label>
-                    <div className="relative group">
-                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-sky-500 transition-colors" size={18} />
+                    <label className="text-xs font-semibold text-gray-600">Mobile Number *</label>
+                    <div className="relative">
+                      <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                       <input
                         type="tel"
                         name="mobileNumber"
                         value={formData.mobileNumber}
                         onChange={handleChange}
-                        placeholder="9876543210"
+                        placeholder="10-digit number"
                         maxLength="10"
-                        className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 transition-all outline-none text-sm font-medium"
+                        className="w-full pl-10 pr-4 py-2.5 bg-transparent border border-gray-200 rounded-xl focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all outline-none text-sm"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-gray-500 ml-1">Email Address</label>
-                    <div className="relative group">
-                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-sky-500 transition-colors" size={18} />
+                    <label className="text-xs font-semibold text-gray-600">Email Address</label>
+                    <div className="relative">
+                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                       <input
                         type="email"
                         name="email"
                         value={formData.email}
                         onChange={handleChange}
-                        placeholder="john@example.com"
-                        className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 transition-all outline-none text-sm font-medium"
+                        placeholder="Optional"
+                        className="w-full pl-10 pr-4 py-2.5 bg-transparent border border-gray-200 rounded-xl focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all outline-none text-sm"
                       />
                     </div>
                   </div>
@@ -395,22 +382,26 @@ const AssignTask = () => {
               </div>
             </div>
 
-            {/* Visit Details Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6">
-              <div className="space-y-6">
-                <h2 className="text-sm font-bold text-sky-700 uppercase tracking-widest flex items-center gap-2">
-                  <UserCheck size={16} /> Visit Details
-                </h2>
+            <hr className="border-gray-100" />
+
+            {/* Visit Details Section */}
+            <div className="space-y-4">
+              <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                <FileText size={14} /> Visit Information
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
+                {/* Left Column */}
                 <div className="space-y-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-gray-500 ml-1">Person to Meet*</label>
-                    <div className="relative group">
-                      <UserCheck className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-sky-500 transition-colors" size={18} />
+                    <label className="text-xs font-semibold text-gray-600">Person to Meet *</label>
+                    <div className="relative">
+                      <UserCheck className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                       <select
                         name="personToMeet"
                         value={formData.personToMeet}
                         onChange={handleChange}
-                        className="w-full pl-12 pr-10 py-3.5 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 transition-all outline-none text-sm font-bold appearance-none cursor-pointer"
+                        className="w-full pl-10 pr-10 py-2.5 bg-transparent border border-gray-200 rounded-xl focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all outline-none text-sm appearance-none cursor-pointer"
                       >
                         <option value="">Select Person</option>
                         {personToMeetOptions.map((person, index) => (
@@ -421,128 +412,115 @@ const AssignTask = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-sky-600 ml-1">Person to Meet Contact</label>
-                      <div className="relative group">
-                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-sky-400" size={18} />
-                        <input
-                          type="text"
-                          name="personToMeetContact"
-                          value={formData.personToMeetContact}
-                          readOnly
-                          placeholder="Contact"
-                          className="w-full pl-12 pr-4 py-3.5 bg-sky-50/30 border border-sky-100 rounded-2xl outline-none text-sm font-semibold text-sky-700 cursor-not-allowed"
-                        />
-                      </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-gray-600">Their Contact</label>
+                    <div className="relative">
+                      <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                      <input
+                        type="text"
+                        name="personToMeetContact"
+                        value={formData.personToMeetContact}
+                        readOnly
+                        placeholder="Auto-filled"
+                        className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl outline-none text-sm text-gray-500 cursor-not-allowed"
+                      />
                     </div>
+                  </div>
 
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-gray-600">Purpose of Visit</label>
+                    <div className="relative">
+                      <FileText className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                      <input
+                        type="text"
+                        name="purposeOfVisit"
+                        value={formData.purposeOfVisit}
+                        onChange={handleChange}
+                        placeholder="e.g. Meeting, Delivery"
+                        className="w-full pl-10 pr-4 py-2.5 bg-transparent border border-gray-200 rounded-xl focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all outline-none text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column */}
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-gray-500 ml-1">Purpose of Visit</label>
-                      <div className="relative group">
-                        <FileText className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-sky-500 transition-colors" size={18} />
+                      <label className="text-xs font-semibold text-gray-600">Date *</label>
+                      <div className="relative">
+                        <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                         <input
-                          type="text"
-                          name="purposeOfVisit"
-                          value={formData.purposeOfVisit}
+                          type="date"
+                          name="dateOfVisit"
+                          value={formData.dateOfVisit}
                           onChange={handleChange}
-                          placeholder="General Meeting"
-                          className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 transition-all outline-none text-sm font-medium"
+                          className="w-full pl-10 pr-4 py-2.5 bg-transparent border border-gray-200 rounded-xl focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all outline-none text-sm"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-gray-600">Time *</label>
+                      <div className="relative">
+                        <Clock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                        <input
+                          type="time"
+                          name="timeOfEntry"
+                          value={formData.timeOfEntry}
+                          onChange={handleChange}
+                          className="w-full pl-10 pr-4 py-2.5 bg-transparent border border-gray-200 rounded-xl focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all outline-none text-sm"
                         />
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
 
-              <div className="space-y-6">
-                <h2 className="text-sm font-bold text-sky-700 uppercase tracking-widest flex items-center gap-2">
-                  <Clock size={16} /> Timing
-                </h2>
-                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-gray-500 ml-1">Date</label>
-                    <div className="relative group">
-                      <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                      <input
-                        type="date"
-                        name="dateOfVisit"
-                        value={formData.dateOfVisit}
+                    <label className="text-xs font-semibold text-gray-600">Visitor Address</label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3.5 top-3 text-gray-400" size={16} />
+                      <textarea
+                        name="visitorAddress"
+                        value={formData.visitorAddress}
                         onChange={handleChange}
-                        className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-sky-500 transition-all outline-none text-sm font-bold"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-gray-500 ml-1">Time In</label>
-                    <div className="relative group">
-                      <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                      <input
-                        type="time"
-                        name="timeOfEntry"
-                        value={formData.timeOfEntry}
-                        onChange={handleChange}
-                        className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-sky-500 transition-all outline-none text-sm font-bold"
+                        rows="3"
+                        placeholder="Enter full address or use location..."
+                        className="w-full pl-10 pr-4 py-2.5 bg-transparent border border-gray-200 rounded-xl focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all outline-none text-sm resize-none"
                       />
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-
-            {/* Address */}
-            <div className="space-y-1.5 pt-4">
-              <label className="text-xs font-bold text-gray-500 ml-1">Visitor Address</label>
-              <div className="relative group">
-                <MapPin className="absolute left-4 top-4 text-gray-400 group-focus-within:text-sky-500 transition-colors" size={18} />
-                <textarea
-                  name="visitorAddress"
-                  value={formData.visitorAddress}
-                  onChange={handleChange}
-                  rows="3"
-                  placeholder="Enter full address..."
-                  className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 transition-all outline-none text-sm font-medium resize-none"
-                />
               </div>
             </div>
           </div>
 
           {/* Action Bar */}
-          <div className="p-4 sm:p-8 bg-sky-50/50 flex flex-col sm:flex-row gap-4 items-center justify-between">
-            <div className="text-[10px] sm:text-xs text-gray-500 font-medium">
-              Fields marked with * are mandatory
-            </div>
-            <div className="flex gap-4 w-full sm:w-auto">
-              <button
-                type="button"
-                onClick={() => navigate("/dashboard/quick-task")}
-                className="flex-1 sm:flex-none px-8 py-3.5 bg-white text-gray-600 rounded-2xl font-bold shadow-sm hover:bg-gray-100 transition-all"
-              >
-                Cancel
-              </button>
+          <div className="p-4 sm:p-5 bg-gray-50/50 flex flex-col sm:flex-row gap-4 items-center justify-end">
+            <div className="flex flex-col-reverse sm:flex-row gap-3 w-full sm:w-auto">
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-10 py-3.5 bg-sky-500 text-white rounded-2xl font-bold shadow-xl shadow-sky-200 hover:bg-sky-600 hover:scale-105 transition-all disabled:opacity-50"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-2.5 bg-orange-600 text-white rounded-xl font-medium shadow-sm hover:bg-orange-700 transition-colors disabled:opacity-70 text-sm"
               >
                 {isSubmitting ? (
-                  <RefreshCw className="animate-spin" size={18} />
+                  <RefreshCw className="animate-spin" size={16} />
                 ) : (
-                  <Send size={18} />
+                  <Send size={16} />
                 )}
-                {isSubmitting ? "Submitting..." : "Generate Gate Pass"}
+                {isSubmitting ? "Submitting..." : "Generate Pass"}
               </button>
             </div>
           </div>
         </form>
       </div>
 
+      {/* Toast Notification */}
       {toast.show && (
-        <div className="fixed top-6 right-6 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
-          <div className={`flex items-center gap-3 px-6 py-3 rounded-2xl shadow-2xl text-white ${toast.type === "success" ? "bg-green-500" : "bg-red-500"
-            }`}>
-            {toast.type === "success" ? <CheckCircle size={20} /> : <XCircle size={20} />}
-            <span className="font-bold text-sm">{toast.message}</span>
+        <div className="fixed bottom-6 right-6 sm:bottom-auto sm:top-6 z-50 animate-in fade-in slide-in-from-bottom-4 sm:slide-in-from-top-4 duration-300">
+          <div className={`flex items-center gap-2.5 px-5 py-3 rounded-xl shadow-lg text-white text-sm font-medium ${
+            toast.type === "success" ? "bg-green-600" : "bg-red-600"
+          }`}>
+            {toast.type === "success" ? <CheckCircle size={18} /> : <XCircle size={18} />}
+            <span>{toast.message}</span>
           </div>
         </div>
       )}

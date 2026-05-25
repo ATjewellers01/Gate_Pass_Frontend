@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Menu, X } from 'lucide-react'
+import { Menu } from 'lucide-react'
 import { Outlet } from "react-router-dom"
 import Sidebar from "./Sidebar"
 
@@ -9,7 +9,7 @@ export default function AdminLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
+    <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
       {/* Sidebar - Desktop */}
       <div className="hidden md:block h-full">
         <Sidebar />
@@ -17,8 +17,8 @@ export default function AdminLayout() {
 
       {/* Mobile Sidebar Overlay */}
       {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm md:hidden"
+        <div
+          className="fixed inset-0 z-30 bg-black/40 backdrop-blur-sm md:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
@@ -33,18 +33,29 @@ export default function AdminLayout() {
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col overflow-hidden relative">
         {/* Mobile Header */}
-        <header className="flex h-16 items-center justify-between border-b border-sky-100 bg-white px-4 md:hidden shadow-sm">
+        <header
+          className="flex h-14 items-center justify-between px-4 md:hidden shadow-sm"
+          style={{
+            background: 'rgba(255,255,255,0.9)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            borderBottom: '1px solid rgba(186, 230, 253, 0.6)',
+          }}
+        >
           <div className="flex items-center gap-3">
-            <div className="bg-sky-500 p-1.5 rounded-lg">
-              <span className="text-white font-bold text-lg">GP</span>
+            <div
+              className="p-1.5 rounded-lg"
+              style={{ background: 'linear-gradient(135deg, #0ea5e9, #6366f1)' }}
+            >
+              <span className="text-white font-bold text-sm">GP</span>
             </div>
-            <h1 className="text-lg font-bold text-gray-800">GatePass</h1>
+            <h1 className="text-base font-bold text-gray-800">GatePass</h1>
           </div>
-          <button 
+          <button
             onClick={() => setIsMobileMenuOpen(true)}
-            className="p-2 rounded-lg text-gray-600 hover:bg-sky-50 transition-colors"
+            className="p-2 rounded-lg text-gray-500 hover:bg-orange-50 hover:text-orange-600 transition-colors"
           >
-            <Menu size={24} />
+            <Menu size={22} />
           </button>
         </header>
 
@@ -57,4 +68,4 @@ export default function AdminLayout() {
       </div>
     </div>
   )
-}
+}

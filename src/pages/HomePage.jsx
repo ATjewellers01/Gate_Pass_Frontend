@@ -44,11 +44,42 @@ const last7Days = () => {
   return days
 }
 
-const fmt = (d) => {
-  if (!d) return "—"
-  const date = new Date(d)
-  if (isNaN(date)) return d?.toString().split(",")[0] || "—"
-  return date.toLocaleDateString("en-IN", { day: "2-digit", month: "short" })
+const formatDate = (d) => {
+  if (!d) return "—";
+  try {
+    const str = d.toString();
+    if (str.includes(",")) return str.split(",")[0].trim();
+    const date = new Date(str);
+    if (!isNaN(date.getTime())) {
+      return `${String(date.getDate()).padStart(2, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}-${date.getFullYear()}`;
+    }
+    return str;
+  } catch (e) {
+    return "—";
+  }
+}
+
+const formatTime = (timeStr, fallbackDateStr) => {
+  try {
+    let val = timeStr || fallbackDateStr;
+    if (!val) return "—";
+    val = val.toString();
+    
+    if (/^\d{1,2}:\d{2}(?:\s*(?:AM|PM|am|pm))?(?::\d{2})?$/.test(val.trim())) return val.trim();
+    
+    if (val.includes(",")) {
+      const parts = val.split(",");
+      return parts.length > 1 ? parts[1].trim() : val;
+    }
+    
+    const d = new Date(val);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    }
+    return val;
+  } catch (e) {
+    return "—";
+  }
 }
 
 /* ─── badge ─── */
@@ -173,8 +204,8 @@ const HomePage = () => {
     {
       label: "Total Visitors",
       value: stats.total,
-      icon: <Users size={18} className="text-sky-500" />,
-      iconBg: "bg-sky-50",
+      icon: <Users size={18} className="text-orange-500" />,
+      iconBg: "bg-orange-50",
       trend: "+Live",
       trendColor: "text-emerald-500"
     },
@@ -197,18 +228,18 @@ const HomePage = () => {
     {
       label: "Gate Pass Open",
       value: stats.open,
-      icon: <Shield size={18} className="text-violet-500" />,
-      iconBg: "bg-violet-50",
+      icon: <Shield size={18} className="text-orange-600" />,
+      iconBg: "bg-orange-100",
       trend: "Active",
-      trendColor: "text-violet-500"
+      trendColor: "text-orange-600"
     },
   ]
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="h-full max-h-[calc(100vh-4rem)] flex flex-col space-y-4 sm:space-y-6 animate-in fade-in duration-500">
 
       {/* ── Stat Cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((c, i) => (
           <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-4">
             <div className={`${c.iconBg} w-11 h-11 rounded-xl flex items-center justify-center shrink-0`}>
@@ -230,7 +261,7 @@ const HomePage = () => {
       </div>
 
       {/* ── Charts Row ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="shrink-0 grid grid-cols-1 lg:grid-cols-2 gap-4">
 
         {/* Bar Chart */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
@@ -238,7 +269,7 @@ const HomePage = () => {
             <div>
               <h2 className="text-sm font-bold text-gray-800">Visitor Activity</h2>
               <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-2">
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-sky-500 inline-block" /> Visitors</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-orange-500 inline-block" /> Visitors</span>
                 <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-emerald-400 inline-block" /> Approved</span>
               </p>
             </div>
@@ -250,7 +281,7 @@ const HomePage = () => {
               <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: "#f8fafc" }} />
-              <Bar dataKey="Visitors" fill="#38bdf8" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Visitors" fill="#f97316" radius={[4, 4, 0, 0]} />
               <Bar dataKey="Approved" fill="#34d399" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -269,24 +300,24 @@ const HomePage = () => {
             <AreaChart data={lineData}>
               <defs>
                 <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#818cf8" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#818cf8" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#ea580c" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="#ea580c" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
               <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} />
-              <Area type="monotone" dataKey="Total" stroke="#818cf8" strokeWidth={2} fill="url(#colorTotal)" dot={{ r: 3, fill: "#818cf8", strokeWidth: 0 }} />
+              <Area type="monotone" dataKey="Total" stroke="#ea580c" strokeWidth={2} fill="url(#colorTotal)" dot={{ r: 3, fill: "#ea580c", strokeWidth: 0 }} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
       </div>
 
       {/* ── Visitor Table ── */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex-1 min-h-0 flex flex-col">
         {/* Table header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-gray-50">
+        <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-gray-50">
           <h2 className="text-sm font-bold text-gray-800">
             All Visitors <span className="text-gray-400 font-medium">({visits.length})</span>
           </h2>
@@ -298,18 +329,18 @@ const HomePage = () => {
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Search visitor..."
-                className="pl-9 pr-4 py-2 text-xs bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:border-sky-300 focus:bg-white transition-all w-full sm:w-48"
+                className="pl-9 pr-4 py-2 text-xs bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:border-orange-300 focus:bg-white transition-all w-full sm:w-48"
               />
             </div>
             <button
-              onClick={() => navigate("/dashboard/reports")}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-sky-600 bg-sky-50 rounded-xl hover:bg-sky-100 transition-all whitespace-nowrap"
+              onClick={() => navigate("/reports")}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-orange-600 bg-orange-50 rounded-xl hover:bg-orange-100 transition-all whitespace-nowrap"
             >
               <Eye size={13} /> View All
             </button>
             <button
-              onClick={() => navigate("/dashboard/assign-task")}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-sky-500 rounded-xl hover:bg-sky-600 transition-all whitespace-nowrap"
+              onClick={() => navigate("/request-gate-pass")}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-orange-500 rounded-xl hover:bg-orange-600 transition-all whitespace-nowrap"
             >
               <UserPlus size={13} /> New Visit
             </button>
@@ -317,10 +348,10 @@ const HomePage = () => {
         </div>
 
         {/* ── Mobile: Card List ── */}
-        <div className="block md:hidden divide-y divide-gray-50">
+        <div className="block md:hidden flex-1 overflow-y-auto min-h-0 divide-y divide-gray-50">
           {loading ? (
             <div className="flex flex-col items-center gap-2 py-12 text-gray-400">
-              <div className="w-6 h-6 border-2 border-sky-200 border-t-sky-500 rounded-full animate-spin" />
+              <div className="w-6 h-6 border-2 border-orange-200 border-t-orange-500 rounded-full animate-spin" />
               <span className="text-xs">Loading visitors...</span>
             </div>
           ) : tableData.length === 0 ? (
@@ -334,7 +365,7 @@ const HomePage = () => {
               return (
                 <div key={i} className="flex items-start gap-3 px-4 py-4 hover:bg-gray-50 transition-colors">
                   {/* Avatar / Photo */}
-                  <div className="w-9 h-9 rounded-full overflow-hidden border border-gray-100 bg-sky-100 flex items-center justify-center shrink-0">
+                  <div className="w-9 h-9 rounded-full overflow-hidden border border-gray-100 bg-orange-100 flex items-center justify-center shrink-0">
                     {getImageUrl(v.visitor_photo) ? (
                       <img
                         src={getImageUrl(v.visitor_photo)}
@@ -343,7 +374,7 @@ const HomePage = () => {
                         onError={e => { e.target.style.display='none'; e.target.parentNode.querySelector('span')?.style && (e.target.parentNode.querySelector('span').style.display='flex'); }}
                       />
                     ) : null}
-                    <span className={`text-sky-600 font-bold text-sm ${getImageUrl(v.visitor_photo) ? 'hidden' : 'flex'} items-center justify-center w-full h-full`}>
+                    <span className={`text-orange-600 font-bold text-sm ${getImageUrl(v.visitor_photo) ? 'hidden' : 'flex'} items-center justify-center w-full h-full`}>
                       {(v.visitor_name || v.name || "V").charAt(0).toUpperCase()}
                     </span>
                   </div>
@@ -356,11 +387,19 @@ const HomePage = () => {
                       {v.person_to_meet ? `Meeting: ${v.person_to_meet}` : ""}
                       {v.mobile_number ? ` · ${v.mobile_number}` : ""}
                     </div>
-                    <div className="flex items-center gap-3 mt-1.5">
-                      <span className="text-[11px] text-gray-400">{fmt(v.timestamp || v.date_of_visit)}</span>
+                    <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                      <span className="text-[11px] text-gray-400">{formatDate(v.timestamp || v.date_of_visit)}</span>
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                        ↓ {formatTime(v.time_of_entry, v.timestamp)}
+                      </span>
+                      {v.visitor_out_time && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full">
+                          ↑ {formatTime(v.visitor_out_time)}
+                        </span>
+                      )}
                       {v.gate_pass_closed
                         ? <span className="text-[10px] font-semibold text-gray-400">● Closed</span>
-                        : <span className="text-[10px] font-semibold text-violet-500">● Open</span>
+                        : <span className="text-[10px] font-semibold text-orange-500">● Open</span>
                       }
                     </div>
                   </div>
@@ -371,8 +410,8 @@ const HomePage = () => {
         </div>
 
         {/* ── Desktop: Table ── */}
-        <div className="hidden md:block overflow-x-auto max-h-[420px] overflow-y-auto">
-          <table className="w-full text-xs">
+        <div className="hidden md:block flex-1 overflow-x-auto overflow-y-auto min-h-0">
+          <table className="w-full text-xs relative">
             <thead className="sticky top-0 z-10 bg-white">
               <tr className="text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">
                 <th className="px-6 py-3 text-left">Visitor</th>
@@ -380,6 +419,8 @@ const HomePage = () => {
                 <th className="px-4 py-3 text-left hidden lg:table-cell">Person to Meet</th>
                 <th className="px-4 py-3 text-left hidden lg:table-cell">Purpose</th>
                 <th className="px-4 py-3 text-left hidden lg:table-cell">Date</th>
+                <th className="px-4 py-3 text-left hidden lg:table-cell">Time In</th>
+                <th className="px-4 py-3 text-left hidden lg:table-cell">Time Out</th>
                 <th className="px-4 py-3 text-left">Status</th>
                 <th className="px-4 py-3 text-left">Gate Pass</th>
                 <th className="px-4 py-3" />
@@ -388,16 +429,16 @@ const HomePage = () => {
             <tbody className="divide-y divide-gray-50">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-gray-400">
+                  <td colSpan={10} className="px-6 py-12 text-center text-gray-400">
                     <div className="flex flex-col items-center gap-2">
-                      <div className="w-6 h-6 border-2 border-sky-200 border-t-sky-500 rounded-full animate-spin" />
+                      <div className="w-6 h-6 border-2 border-orange-200 border-t-orange-500 rounded-full animate-spin" />
                       Loading visitors...
                     </div>
                   </td>
                 </tr>
               ) : tableData.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-gray-400">
+                  <td colSpan={10} className="px-6 py-12 text-center text-gray-400">
                     <Users size={28} className="mx-auto mb-2 opacity-30" />
                     No visitors found
                   </td>
@@ -409,7 +450,7 @@ const HomePage = () => {
                     <tr key={i} className="hover:bg-gray-50/60 transition-colors group">
                       <td className="px-6 py-3.5">
                         <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-100 bg-sky-100 flex items-center justify-center shrink-0">
+                        <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-100 bg-orange-100 flex items-center justify-center shrink-0">
                           {getImageUrl(v.visitor_photo) ? (
                             <img
                               src={getImageUrl(v.visitor_photo)}
@@ -418,7 +459,7 @@ const HomePage = () => {
                               onError={e => { e.target.style.display='none'; e.target.parentNode.querySelector('span')?.style && (e.target.parentNode.querySelector('span').style.display='flex'); }}
                             />
                           ) : null}
-                          <span className={`text-sky-600 font-bold text-xs ${getImageUrl(v.visitor_photo) ? 'hidden' : 'flex'} items-center justify-center w-full h-full`}>
+                          <span className={`text-orange-600 font-bold text-xs ${getImageUrl(v.visitor_photo) ? 'hidden' : 'flex'} items-center justify-center w-full h-full`}>
                             {(v.visitor_name || v.name || "V").charAt(0).toUpperCase()}
                           </span>
                         </div>
@@ -432,12 +473,26 @@ const HomePage = () => {
                         </span>
                       </td>
                       <td className="px-4 py-3.5 text-gray-500 hidden lg:table-cell max-w-[120px] truncate">{v.purpose_of_visit || v.purpose || "—"}</td>
-                      <td className="px-4 py-3.5 text-gray-400 hidden lg:table-cell whitespace-nowrap">{fmt(v.timestamp || v.date_of_visit)}</td>
+                      <td className="px-4 py-3.5 text-gray-500 hidden lg:table-cell whitespace-nowrap font-medium">{formatDate(v.timestamp || v.date_of_visit)}</td>
+                      <td className="px-4 py-3.5 hidden lg:table-cell whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                          ↓ {formatTime(v.time_of_entry, v.timestamp)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 hidden lg:table-cell whitespace-nowrap">
+                        {v.visitor_out_time ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full">
+                            ↑ {formatTime(v.visitor_out_time)}
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-gray-300">—</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3.5"><Badge status={status} /></td>
                       <td className="px-4 py-3.5">
                         {v.gate_pass_closed
                           ? <span className="text-[11px] font-semibold text-gray-400">● Closed</span>
-                          : <span className="text-[11px] font-semibold text-violet-500">● Open</span>
+                          : <span className="text-[11px] font-semibold text-orange-500">● Open</span>
                         }
                       </td>
                       <td className="px-4 py-3.5">
@@ -455,11 +510,11 @@ const HomePage = () => {
 
         {/* Footer */}
         {!loading && tableData.length > 0 && (
-          <div className="px-4 sm:px-6 py-3 border-t border-gray-50 flex items-center justify-between">
+          <div className="shrink-0 px-4 sm:px-6 py-3 border-t border-gray-50 flex items-center justify-between">
             <span className="text-xs text-gray-400">Showing {tableData.length} of {visits.length} records</span>
             <button
-              onClick={() => navigate("/dashboard/reports")}
-              className="text-xs text-sky-500 font-bold hover:underline flex items-center gap-1"
+              onClick={() => navigate("/reports")}
+              className="text-xs text-orange-500 font-bold hover:underline flex items-center gap-1"
             >
               View full report <ArrowRight size={12} />
             </button>

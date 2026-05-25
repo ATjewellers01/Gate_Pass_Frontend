@@ -4,9 +4,7 @@ import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { loginUser } from "../services/slice/loginSlice";
-import { Eye, EyeOff } from "lucide-react";
-import AdminLayout from "../components/AdminLayout";
-
+import { Eye, EyeOff, Shield, Lock, User } from "lucide-react";
 
 const LoginPage = () => {
     const navigate = useNavigate();
@@ -14,30 +12,22 @@ const LoginPage = () => {
 
     const { isLoggedIn, userData, error } = useSelector((state) => state.login);
 
-    // ✅ All hooks must be declared before any early return
     const [isLoginLoading, setIsLoginLoading] = useState(false);
-    const [formData, setFormData] = useState({
-        username: "",
-        password: "",
-    });
+    const [formData, setFormData] = useState({ username: "", password: "" });
     const [toast, setToast] = useState({ show: false, message: "", type: "" });
-    const [typedText, setTypedText] = useState("");
     const [showPassword, setShowPassword] = useState(false);
-
-    // ✅ All hooks declared above — navigation handled in useEffect below
 
     useEffect(() => {
         if (isLoggedIn && userData) {
             setIsLoginLoading(false);
-            if (userData.role === "admin" || userData.user_name?.toUpperCase() === "AAKASH AGRAWAL") {
-                navigate("/dashboard/approval-request", { replace: true });
-            } else if (userData.role === "guard") {
-                navigate("/dashboard/quick-task", { replace: true });
+            if (userData.role?.toLowerCase() === "admin" || userData.user_name?.toUpperCase() === "AAKASH AGRAWAL") {
+                navigate("/approval-request", { replace: true });
+            } else if (userData.role?.toLowerCase() === "guard") {
+                navigate("/close-gate-pass", { replace: true });
             } else {
-                navigate("/dashboard/approval-request", { replace: true });
+                navigate("/approval-request", { replace: true });
             }
         }
-
         if (error) {
             setIsLoginLoading(false);
             showToast(error, "error");
@@ -57,167 +47,262 @@ const LoginPage = () => {
 
     const showToast = (message, type) => {
         setToast({ show: true, message, type });
-        setTimeout(() => {
-            setToast({ show: false, message: "", type: "" });
-        }, 5000);
+        setTimeout(() => setToast({ show: false, message: "", type: "" }), 5000);
     };
 
     return (
-        <>
-            <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-sky-50 via-white to-blue-50 p-4">
-                <div className="w-full max-w-md shadow-2xl border border-sky-100 rounded-2xl bg-white overflow-hidden">
-                    {/* Typing Effect Header */}
-                    <div className="px-8 pt-6 pb-2 text-center">
-                        <div className="flex justify-center items-center">
-                            <h1 className="text-2xl font-bold   text-sky-600">
-                                Approve Gatepass
-                            </h1>
+        <div
+            className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+            style={{
+                background: "linear-gradient(135deg, #fff7ed 0%, #ffedd5 40%, #fed7aa 100%)",
+            }}
+        >
+            {/* Decorative blobs */}
+            <div
+                className="absolute top-[-120px] left-[-120px] w-96 h-96 rounded-full opacity-30 pointer-events-none"
+                style={{ background: "radial-gradient(circle, #fb923c, transparent 70%)" }}
+            />
+            <div
+                className="absolute bottom-[-80px] right-[-80px] w-80 h-80 rounded-full opacity-20 pointer-events-none"
+                style={{ background: "radial-gradient(circle, #ea580c, transparent 70%)" }}
+            />
+            {/* Decorative diamond pattern */}
+            <div
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-5 pointer-events-none"
+                style={{ background: "radial-gradient(circle, #7c2d12, transparent 60%)", border: "2px solid #c2410c" }}
+            />
+
+            {/* Card */}
+            <div
+                className="relative w-full max-w-md z-10 rounded-3xl overflow-hidden"
+                style={{
+                    background: "rgba(255,255,255,0.92)",
+                    backdropFilter: "blur(24px)",
+                    WebkitBackdropFilter: "blur(24px)",
+                    border: "1px solid rgba(249,115,22,0.2)",
+                    boxShadow: "0 32px 80px rgba(194,65,12,0.18), 0 8px 32px rgba(0,0,0,0.08)",
+                }}
+            >
+                {/* Top accent bar */}
+                <div
+                    className="h-1.5 w-full"
+                    style={{ background: "linear-gradient(90deg, #f97316, #ea580c, #dc2626)" }}
+                />
+
+                {/* Logo & Header */}
+                <div className="px-8 pt-8 pb-4 text-center">
+                    {/* Logo */}
+                    <div className="flex justify-center mb-4">
+                        <div
+                            className="w-24 h-24 rounded-full p-1.5 shadow-xl"
+                            style={{
+                                background: "linear-gradient(135deg, #fff7ed, #ffedd5)",
+                                border: "3px solid #fed7aa",
+                            }}
+                        >
+                            <img
+                                src="/logo.png"
+                                alt="AT Jewellers"
+                                className="w-full h-full object-contain rounded-full"
+                            />
                         </div>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="px-8 pt-4 pb-8 space-y-6">
-                        {/* Username Field with Animation */}
-                        <div className="relative group">
-                            <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2 ml-1">
-                                <i className="fas fa-user mr-2 text-sky-500"></i> Enter your username
-                            </label>
-                            <div className="relative">
-                                <input
-                                    id="username"
-                                    name="username"
-                                    type="text"
-                                    placeholder=""
-                                    required
-                                    value={formData.username}
-                                    onChange={handleChange}
-                                    className="w-full px-4 py-3 pl-11 bg-gray-50 border border-gray-200 rounded-xl 
-                         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                         transition-all duration-300 group-hover:border-blue-300 
-                         placeholder:text-gray-400 shadow-sm"
-                                />
-                                <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                                    <i className="fas fa-user text-gray-400"></i>
-                                </div>
-                                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                                    {formData.username && (
-                                        <i className="fas fa-check-circle text-green-500 text-sm"></i>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Password Field with Animation */}
-                        <div className="relative group">
-                            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2 ml-1">
-                                <i className="fas fa-key mr-2 text-sky-500"></i> Enter your password
-                            </label>
-                            <div className="relative">
-                                <input
-                                    id="password"
-                                    name="password"
-                                    type={showPassword ? "text" : "password"}
-                                    placeholder=""
-                                    required
-                                    value={formData.password}
-                                    onChange={handleChange}
-                                    className="w-full px-4 py-3 pl-11 bg-gray-50 border border-gray-200 rounded-xl 
-                         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                         transition-all duration-300 group-hover:border-blue-300 
-                         placeholder:text-gray-400 shadow-sm"
-                                />
-                                <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                                    <i className="fas fa-lock text-gray-400"></i>
-                                </div>
-                                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                    {formData.password && (
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowPassword((prev) => !prev)}
-                                            className="text-gray-500 hover:text-sky-500 focus:outline-none"
-                                        >
-                                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                                        </button>
-                                    )}
-                                </div>
-
-                            </div>
-                        </div>
-
-                        {/* Login Button */}
-                        <div className="pt-4">
-                            <button
-                                type="submit"
-                                disabled={isLoginLoading}
-                                className="w-full py-3.5 px-4 bg-gradient-to-r from-sky-400 to-blue-500 
-                       text-white font-medium rounded-xl shadow-lg hover:shadow-xl 
-                       transform hover:-translate-y-0.5 transition-all duration-300 
-                       disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none
-                       focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
-                            >
-                                {isLoginLoading ? (
-                                    <span className="flex items-center justify-center">
-                                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        Logging...
-                                    </span>
-                                ) : (
-                                    <span className="flex items-center justify-center text-white">
-                                        <i className="fas fa-sign-in-alt mr-2"></i>
-                                        Login
-                                    </span>
-                                )}
-                            </button>
-                        </div>
-
-                        {/* Divider */}
-                        <div className="relative py-2">
-                            <div className="absolute inset-0 flex items-center">
-                                <div className="w-full border-t border-gray-200"></div>
-                            </div>
-                        </div>
-                    </form>
-
-
+                    <h1 className="text-2xl font-extrabold tracking-tight" style={{ color: '#7c2d12' }}>
+                        AT Jewellers
+                    </h1>
+                    <p className="text-sm font-semibold mt-0.5" style={{ color: '#c2410c' }}>
+                        Symbol of Trust · Since 1957
+                    </p>
+                    <div className="mt-3 pt-3 border-t border-orange-100">
+                        <p className="text-xs text-orange-400 font-medium uppercase tracking-widest">
+                            GatePass Portal
+                        </p>
+                    </div>
                 </div>
 
-                {/* Toast Notification */}
-                {toast.show && (
-                    <div
-                        className={`fixed bottom-6 right-6 px-6 py-4 rounded-xl shadow-2xl transition-all duration-300 transform ${toast.type === "success"
-                            ? "bg-gradient-to-r from-green-50 to-emerald-50 text-green-800 border border-green-200"
-                            : "bg-gradient-to-r from-red-50 to-pink-50 text-red-800 border border-red-200"
-                            }`}
-                        style={{
-                            animation: "slideInRight 0.3s ease-out",
-                        }}
-                    >
-                        <div className="flex items-center">
-                            <div className={`mr-3 ${toast.type === "success" ? "text-green-500" : "text-red-500"}`}>
-                                {toast.type === "success" ? (
-                                    <i className="fas fa-check-circle text-xl"></i>
-                                ) : (
-                                    <i className="fas fa-exclamation-circle text-xl"></i>
-                                )}
-                            </div>
-                            <div>
-                                <div className="font-medium">
-                                    {toast.type === "success" ? "Success" : "Error"}
-                                </div>
-                                <div className="text-sm">{toast.message}</div>
-                            </div>
-                            <button
-                                onClick={() => setToast({ show: false, message: "", type: "" })}
-                                className="ml-4 text-gray-400 hover:text-gray-600"
-                            >
-                                <i className="fas fa-times"></i>
-                            </button>
+                <form onSubmit={handleSubmit} className="px-8 py-5 space-y-5">
+                    {/* Username */}
+                    <div className="space-y-1.5">
+                        <label
+                            htmlFor="username"
+                            className="block text-xs font-bold uppercase tracking-wider ml-1"
+                            style={{ color: '#92400e' }}
+                        >
+                            Username
+                        </label>
+                        <div className="relative">
+                            <User
+                                size={16}
+                                className="absolute left-4 top-1/2 -translate-y-1/2"
+                                style={{ color: '#fb923c' }}
+                            />
+                            <input
+                                id="username"
+                                name="username"
+                                type="text"
+                                required
+                                value={formData.username}
+                                onChange={handleChange}
+                                placeholder="Enter your username"
+                                className="w-full pl-11 pr-4 py-3.5 rounded-xl text-sm font-medium outline-none transition-all"
+                                style={{
+                                    background: "#fff7ed",
+                                    border: "1.5px solid #fed7aa",
+                                    color: "#431407",
+                                }}
+                                onFocus={(e) => {
+                                    e.target.style.borderColor = "#f97316";
+                                    e.target.style.boxShadow = "0 0 0 3px rgba(249,115,22,0.15)";
+                                    e.target.style.background = "#ffffff";
+                                }}
+                                onBlur={(e) => {
+                                    e.target.style.borderColor = "#fed7aa";
+                                    e.target.style.boxShadow = "none";
+                                    e.target.style.background = "#fff7ed";
+                                }}
+                            />
+                            {formData.username && (
+                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-emerald-500 text-xs font-bold">✓</span>
+                            )}
                         </div>
                     </div>
-                )}
+
+                    {/* Password */}
+                    <div className="space-y-1.5">
+                        <label
+                            htmlFor="password"
+                            className="block text-xs font-bold uppercase tracking-wider ml-1"
+                            style={{ color: '#92400e' }}
+                        >
+                            Password
+                        </label>
+                        <div className="relative">
+                            <Lock
+                                size={16}
+                                className="absolute left-4 top-1/2 -translate-y-1/2"
+                                style={{ color: '#fb923c' }}
+                            />
+                            <input
+                                id="password"
+                                name="password"
+                                type={showPassword ? "text" : "password"}
+                                required
+                                value={formData.password}
+                                onChange={handleChange}
+                                placeholder="Enter your password"
+                                className="w-full pl-11 pr-12 py-3.5 rounded-xl text-sm font-medium outline-none transition-all"
+                                style={{
+                                    background: "#fff7ed",
+                                    border: "1.5px solid #fed7aa",
+                                    color: "#431407",
+                                }}
+                                onFocus={(e) => {
+                                    e.target.style.borderColor = "#f97316";
+                                    e.target.style.boxShadow = "0 0 0 3px rgba(249,115,22,0.15)";
+                                    e.target.style.background = "#ffffff";
+                                }}
+                                onBlur={(e) => {
+                                    e.target.style.borderColor = "#fed7aa";
+                                    e.target.style.boxShadow = "none";
+                                    e.target.style.background = "#fff7ed";
+                                }}
+                            />
+                            {formData.password && (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword((prev) => !prev)}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 transition-colors"
+                                    style={{ color: '#fb923c' }}
+                                >
+                                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Submit Button */}
+                    <div className="pt-2">
+                        <button
+                            type="submit"
+                            disabled={isLoginLoading}
+                            className="w-full py-4 rounded-xl font-bold text-sm text-white tracking-wide transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                            style={{
+                                background: "linear-gradient(135deg, #f97316, #ea580c)",
+                                boxShadow: "0 8px 32px rgba(249,115,22,0.4)",
+                            }}
+                            onMouseEnter={(e) => {
+                                if (!isLoginLoading) {
+                                    e.target.style.transform = "translateY(-1px)";
+                                    e.target.style.boxShadow = "0 12px 40px rgba(249,115,22,0.5)";
+                                }
+                            }}
+                            onMouseLeave={(e) => {
+                                e.target.style.transform = "translateY(0)";
+                                e.target.style.boxShadow = "0 8px 32px rgba(249,115,22,0.4)";
+                            }}
+                        >
+                            {isLoginLoading ? (
+                                <span className="flex items-center justify-center gap-2">
+                                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                    </svg>
+                                    Signing in...
+                                </span>
+                            ) : (
+                                "Sign In"
+                            )}
+                        </button>
+                    </div>
+                </form>
+
+                {/* Footer */}
+                <div className="px-8 pb-7 text-center">
+                    <p className="text-xs" style={{ color: '#a16207' }}>
+                        Powered by{" "}
+                        <a
+                            href="https://www.botivate.in/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-bold transition-opacity hover:opacity-70"
+                            style={{
+                                background: "linear-gradient(90deg, #f97316, #ea580c)",
+                                WebkitBackgroundClip: "text",
+                                WebkitTextFillColor: "transparent",
+                                backgroundClip: "text",
+                            }}
+                        >
+                            Botivate
+                        </a>
+                    </p>
+                </div>
             </div>
-        </>
+
+            {/* Toast */}
+            {toast.show && (
+                <div
+                    className="fixed bottom-6 right-6 z-50 px-5 py-3.5 rounded-2xl shadow-2xl text-sm font-bold flex items-center gap-3 transition-all duration-300"
+                    style={{
+                        background: toast.type === "success"
+                            ? "linear-gradient(135deg, #059669, #10b981)"
+                            : "linear-gradient(135deg, #dc2626, #ef4444)",
+                        color: "#fff",
+                        boxShadow: toast.type === "success"
+                            ? "0 8px 32px rgba(16,185,129,0.4)"
+                            : "0 8px 32px rgba(239,68,68,0.4)",
+                    }}
+                >
+                    {toast.type === "success" ? "✓" : "✕"} {toast.message}
+                    <button
+                        onClick={() => setToast({ show: false, message: "", type: "" })}
+                        className="ml-2 opacity-70 hover:opacity-100 text-white font-bold"
+                    >
+                        ×
+                    </button>
+                </div>
+            )}
+        </div>
     );
 };
 
