@@ -13,7 +13,7 @@ const LoginPage = () => {
     const { isLoggedIn, userData, error } = useSelector((state) => state.login);
 
     const [isLoginLoading, setIsLoginLoading] = useState(false);
-    const [formData, setFormData] = useState({ username: "", password: "" });
+    const [formData, setFormData] = useState({ phone: "", password: "" });
     const [toast, setToast] = useState({ show: false, message: "", type: "" });
     const [showPassword, setShowPassword] = useState(false);
 
@@ -122,14 +122,14 @@ const LoginPage = () => {
                 </div>
 
                 <form onSubmit={handleSubmit} className="px-8 py-5 space-y-5">
-                    {/* Username */}
+                    {/* Phone Number */}
                     <div className="space-y-1.5">
                         <label
-                            htmlFor="username"
+                            htmlFor="phone"
                             className="block text-xs font-bold uppercase tracking-wider ml-1"
                             style={{ color: '#92400e' }}
                         >
-                            Username
+                            Phone Number
                         </label>
                         <div className="relative">
                             <User
@@ -138,13 +138,13 @@ const LoginPage = () => {
                                 style={{ color: '#fb923c' }}
                             />
                             <input
-                                id="username"
-                                name="username"
-                                type="text"
+                                id="phone"
+                                name="phone"
+                                type="tel"
                                 required
-                                value={formData.username}
+                                value={formData.phone}
                                 onChange={handleChange}
-                                placeholder="Enter your username"
+                                placeholder="Enter your phone number"
                                 className="w-full pl-11 pr-4 py-3.5 rounded-xl text-sm font-medium outline-none transition-all"
                                 style={{
                                     background: "#fff7ed",
@@ -162,7 +162,7 @@ const LoginPage = () => {
                                     e.target.style.background = "#fff7ed";
                                 }}
                             />
-                            {formData.username && (
+                            {formData.phone && (
                                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-emerald-500 text-xs font-bold">✓</span>
                             )}
                         </div>

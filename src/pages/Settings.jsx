@@ -21,7 +21,6 @@ const Settings = () => {
   // Form state
   const [formData, setFormData] = useState({
     userName: "",
-    userId: "",
     password: "",
     phone: "",
     role: "Staff",
@@ -48,12 +47,19 @@ const Settings = () => {
     }
   };
 
+  const generateUserId = (name) => {
+    return name
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '.')
+      .replace(/[^a-z0-9.]/g, '');
+  };
+
   const handleOpenModal = (user = null) => {
     if (user) {
       setEditingUser(user);
       setFormData({
         userName: user.userName || "",
-        userId: user.userId || "",
         password: "", // We typically don't fetch password, leave blank unless changing
         phone: user.phone || "",
         role: user.role || "Staff",
@@ -63,7 +69,6 @@ const Settings = () => {
       setEditingUser(null);
       setFormData({
         userName: "",
-        userId: "",
         password: "",
         phone: "",
         role: "Staff",
@@ -96,7 +101,6 @@ const Settings = () => {
     try {
       const payload = {
         userName: formData.userName,
-        userId: formData.userId,
         phone: formData.phone,
         role: formData.role,
         pageAccess: formData.selectedPages.join(", ")
@@ -158,8 +162,7 @@ const Settings = () => {
             <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wider">
               <tr>
                 <th className="px-6 py-4 font-bold">Name & Role</th>
-                <th className="px-6 py-4 font-bold">User ID (Login)</th>
-                <th className="px-6 py-4 font-bold">Phone</th>
+                <th className="px-6 py-4 font-bold">Phone (Login ID)</th>
                 <th className="px-6 py-4 font-bold">Page Access</th>
                 <th className="px-6 py-4 font-bold text-right">Actions</th>
               </tr>
@@ -187,8 +190,7 @@ const Settings = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-gray-600 font-medium">{user.userId}</td>
-                    <td className="px-6 py-4 text-gray-500">{user.phone || "—"}</td>
+                    <td className="px-6 py-4 text-gray-600 font-medium">{user.phone || "—"}</td>
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-1">
                         {user.pageAccess ? (
@@ -211,7 +213,7 @@ const Settings = () => {
                         >
                           <Edit size={16} />
                         </button>
-                        {userData?.user_id !== user.userId && (
+                        {userData?.phone !== user.phone && (
                           <button
                             onClick={() => handleDelete(user.id)}
                             className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
@@ -251,17 +253,15 @@ const Settings = () => {
                     type="text"
                     required
                     value={formData.userName}
-                    onChange={e => setFormData({...formData, userName: e.target.value})}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Login User ID *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.userId}
-                    onChange={e => setFormData({...formData, userId: e.target.value})}
+                    onChange={e => {
+                      const name = e.target.value;
+                      setFormData(prev => ({
+                        ...prev,
+                        userName: name,
+                        // Auto-generate userId only for new users, not when editing
+                        ...(!editingUser ? { userId: generateUserId(name) } : {})
+                      }));
+                    }}
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all"
                   />
                 </div>

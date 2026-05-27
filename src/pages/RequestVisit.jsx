@@ -31,6 +31,7 @@ const AssignTask = () => {
   const [toast, setToast] = useState({ show: false, message: "", type: "" });
   const [personToMeetOptions, setPersonToMeetOptions] = useState([]);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
+  const [photoError, setPhotoError] = useState(false);
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -126,6 +127,7 @@ const AssignTask = () => {
         setPhotoFile(file);
         setCapturedPhoto(URL.createObjectURL(file));
         showToast("Photo captured!", "success");
+        setPhotoError(false);
 
         if ("geolocation" in navigator) {
           navigator.geolocation.getCurrentPosition(
@@ -170,6 +172,7 @@ const AssignTask = () => {
   const retakePhoto = () => {
     setCapturedPhoto(null);
     setPhotoFile(null);
+    setPhotoError(false);
     openCamera(currentFacingMode);
   };
 
@@ -207,6 +210,12 @@ const AssignTask = () => {
   };
 
   const validateForm = () => {
+    if (!capturedPhoto) {
+      setPhotoError(true);
+      showToast("Visitor photo is required. Please capture a photo.", "error");
+      return false;
+    }
+    setPhotoError(false);
     const required = ["visitorName", "mobileNumber", "personToMeet", "dateOfVisit", "timeOfEntry"];
     for (let f of required) {
       if (!formData[f]?.trim()) {
@@ -281,9 +290,11 @@ const AssignTask = () => {
               {/* Photo Capture */}
               <div className="w-full lg:w-1/4 xl:w-1/5 space-y-4">
                 <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
-                  <Camera size={14} /> Visitor Photo
+                  <Camera size={14} /> Visitor Photo <span className="text-red-500">*</span>
                 </h2>
-                <div className="relative aspect-video sm:aspect-[4/3] lg:aspect-[4/3] rounded-2xl bg-gray-100 overflow-hidden border border-gray-200 group">
+                <div className={`relative aspect-video sm:aspect-[4/3] lg:aspect-[4/3] rounded-2xl bg-gray-100 overflow-hidden border-2 group ${
+                  photoError ? 'border-red-500 ring-2 ring-red-200' : 'border-gray-200'
+                }`}>
                   {!capturedPhoto ? (
                     <>
                       <video ref={videoRef} autoPlay className="w-full h-full object-cover" />
