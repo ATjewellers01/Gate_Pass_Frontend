@@ -493,7 +493,7 @@ const AdminAllVisits = ({ initialTab = "Visitors", hideTabs = false, readOnly = 
                 {activeMainTab === "Visitors" ? (
                     <div className="space-y-6">
                         {/* Desktop Table */}
-                        <div className="hidden lg:block">
+                        <div className="hidden md:block">
                             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                                 <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
                                     <table className="min-w-full divide-y divide-gray-200">
@@ -559,7 +559,7 @@ const AdminAllVisits = ({ initialTab = "Visitors", hideTabs = false, readOnly = 
                         </div>
 
                         {/* Mobile Cards */}
-                        <div className="lg:hidden space-y-4">
+                        <div className="md:hidden space-y-4">
                             {currentData.map((v) => (
                                 <div key={v.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
                                     <div className="flex items-center gap-3 mb-3">
@@ -590,7 +590,7 @@ const AdminAllVisits = ({ initialTab = "Visitors", hideTabs = false, readOnly = 
                 ) : (
                     <div className="space-y-6">
                         {/* Desktop Table - Employees */}
-                        <div className="hidden lg:block bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                        <div className="hidden md:block bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                             <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
                                 <table className="min-w-full divide-y divide-gray-200">
                                     <thead className="bg-gray-50 sticky top-0 z-10">
@@ -658,7 +658,7 @@ const AdminAllVisits = ({ initialTab = "Visitors", hideTabs = false, readOnly = 
                         </div>
 
                      {/* Mobile Cards - Employees */}
-                     <div className="lg:hidden space-y-4">
+                     <div className="md:hidden space-y-4">
                          {activeMainTab === "Employees" && currentData.map((p) => {
                              const activeMeeting = data.find(v => v.person_to_meet === p.person_to_meet && v.approval_status?.toLowerCase() === 'approved' && !v.gate_pass_closed);
                              const isAvailable = p.status !== 'Absent';
@@ -703,7 +703,7 @@ const AdminAllVisits = ({ initialTab = "Visitors", hideTabs = false, readOnly = 
                      </div>
 
                      {totalPages > 1 && (
-                         <div className="flex items-center justify-between pt-4 lg:hidden">
+                         <div className="flex items-center justify-between pt-4 md:hidden">
                              <button onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} disabled={currentPage === 1} className="px-4 py-2 text-sm font-bold bg-white rounded-xl border border-gray-200 disabled:opacity-50">Prev</button>
                              <button onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} disabled={currentPage === totalPages} className="px-4 py-2 text-sm font-bold bg-white rounded-xl border border-gray-200 disabled:opacity-50">Next</button>
                          </div>

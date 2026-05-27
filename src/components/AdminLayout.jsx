@@ -12,7 +12,7 @@ export default function AdminLayout() {
     <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
       {/* Sidebar - Desktop */}
       <div className="hidden md:block h-full">
-        <Sidebar />
+        <Sidebar closeMenu={() => {}} />
       </div>
 
       {/* Mobile Sidebar Overlay */}
@@ -27,29 +27,23 @@ export default function AdminLayout() {
       <div className={`fixed inset-y-0 left-0 z-40 w-64 transform transition-transform duration-300 ease-in-out md:hidden ${
         isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
       }`}>
-        <Sidebar />
+        <Sidebar closeMenu={() => setIsMobileMenuOpen(false)} />
       </div>
 
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col overflow-hidden relative">
         {/* Mobile Header */}
         <header
-          className="flex h-14 items-center justify-between px-4 md:hidden shadow-sm"
-          style={{
-            background: 'rgba(255,255,255,0.9)',
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
-            borderBottom: '1px solid rgba(186, 230, 253, 0.6)',
-          }}
+          className="flex h-16 items-center justify-between px-4 md:hidden bg-white/90 backdrop-blur-md border-b border-orange-100 shadow-sm z-30 sticky top-0"
         >
           <div className="flex items-center gap-3">
             <div
-              className="p-1.5 rounded-lg"
-              style={{ background: 'linear-gradient(135deg, #0ea5e9, #6366f1)' }}
+              className="p-1.5 rounded-xl shadow-sm"
+              style={{ background: 'linear-gradient(135deg, #f97316, #ea580c)' }}
             >
               <span className="text-white font-bold text-sm">GP</span>
             </div>
-            <h1 className="text-base font-bold text-gray-800">GatePass</h1>
+            <h1 className="text-lg font-extrabold text-gray-800 tracking-tight">GatePass</h1>
           </div>
           <button
             onClick={() => setIsMobileMenuOpen(true)}

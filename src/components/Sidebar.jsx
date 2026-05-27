@@ -15,7 +15,7 @@ import {
   Shield
 } from "lucide-react";
 
-const Sidebar = () => {
+const Sidebar = ({ closeMenu }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -110,6 +110,9 @@ const Sidebar = () => {
             <Link
               key={item.path}
               to={item.path}
+              onClick={() => {
+                if (closeMenu) closeMenu();
+              }}
               className={`flex items-center justify-between group px-3 py-2.5 rounded-xl transition-all duration-200 ${
                 isActive
                   ? "text-white shadow-md"

@@ -15,7 +15,8 @@ import {
   ExternalLink,
   Filter,
   Search,
-  Calendar
+  Calendar,
+  XCircle
 } from "lucide-react"
 import { fetchGatePassesApi, closeGatePassApi } from "../services/cloasePassApi";
 
@@ -73,6 +74,7 @@ const GatePassClosure = () => {
   const [toast, setToast] = useState({ show: false, message: "", type: "" })
   const [closingPasses, setClosingPasses] = useState(new Set())
   const [confirmModal, setConfirmModal] = useState({ show: false, passId: null })
+  const [previewImage, setPreviewImage] = useState(null)
   const previousApprovedRef = useRef(null)
 
   const fetchGatePassData = useCallback(async (isPolling = false) => {
@@ -119,6 +121,16 @@ const GatePassClosure = () => {
 
     return () => clearInterval(intervalId);
   }, [fetchGatePassData])
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+        if (e.key === 'Escape' && previewImage) {
+            setPreviewImage(null);
+        }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [previewImage]);
 
   const showToast = (message, type) => {
     setToast({ show: true, message, type })
@@ -357,7 +369,7 @@ const GatePassClosure = () => {
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="h-10 w-10 rounded-xl overflow-hidden border border-orange-100 flex-shrink-0">
-                              <img src={getImageUrl(gatePass.visitor_photo)} className="h-full w-full object-cover" alt="Visitor" />
+                              <img src={getImageUrl(gatePass.visitor_photo)} className="h-full w-full object-cover cursor-pointer hover:scale-110 transition-transform duration-300" onClick={() => setPreviewImage(getImageUrl(gatePass.visitor_photo))} alt="Visitor" onError={(e) => { e.target.src = "/user.png"; }} />
                             </div>
                             <p className="font-bold text-gray-800 text-sm whitespace-nowrap">{gatePass.visitor_name}</p>
                           </div>
@@ -447,7 +459,7 @@ const GatePassClosure = () => {
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="h-12 w-12 rounded-xl overflow-hidden border border-orange-100 flex-shrink-0">
-                      <img src={getImageUrl(gatePass.visitor_photo)} className="h-full w-full object-cover" alt="Visitor" />
+                      <img src={getImageUrl(gatePass.visitor_photo)} className="h-full w-full object-cover cursor-pointer hover:scale-110 transition-transform duration-300" onClick={() => setPreviewImage(getImageUrl(gatePass.visitor_photo))} alt="Visitor" onError={(e) => { e.target.src = "/user.png"; }} />
                     </div>
                     <div>
                       <p className="font-bold text-gray-800 text-sm">{gatePass.visitor_name}</p>
@@ -549,6 +561,29 @@ const GatePassClosure = () => {
             {toast.message}
           </div>
         </div>
+      )}
+
+      {/* Image Preview Modal */}
+      {previewImage && (
+          <div 
+              className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-[fadeIn_0.2s_ease]"
+              onClick={() => setPreviewImage(null)}
+          >
+              <div className="relative max-w-3xl max-h-[90vh] w-full flex justify-center items-center">
+                  <button 
+                      className="absolute -top-10 right-0 md:-right-10 text-white hover:text-gray-300 transition-colors bg-black/40 hover:bg-black/60 rounded-full p-1"
+                      onClick={() => setPreviewImage(null)}
+                  >
+                      <XCircle size={28} />
+                  </button>
+                  <img 
+                      src={previewImage} 
+                      alt="Preview" 
+                      className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl"
+                      onClick={(e) => e.stopPropagation()}
+                  />
+              </div>
+          </div>
       )}
     </div>
   )

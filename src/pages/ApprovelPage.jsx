@@ -78,6 +78,7 @@ const VisitorManagement = () => {
     const [approvedVisits, setApprovedVisits] = useState([])
     const [loadingStates, setLoadingStates] = useState({});
     const [confirmModal, setConfirmModal] = useState({ show: false, visitId: null, action: null });
+    const [previewImage, setPreviewImage] = useState(null);
 
     const { isLoggedIn: isReduxLoggedIn, userData } = useSelector((state) => state.login);
 
@@ -130,6 +131,16 @@ const VisitorManagement = () => {
             fetchAllData();
         }
     }, [isLoggedIn, activeTab, userData]);
+
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape' && previewImage) {
+                setPreviewImage(null);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [previewImage]);
 
     const fetchPendingVisits = fetchAllData;
     const fetchApprovedVisits = fetchAllData;
@@ -367,7 +378,8 @@ const VisitorManagement = () => {
                                                     <div className="h-12 w-12 rounded-xl overflow-hidden border border-orange-100 flex-shrink-0">
                                                         <img 
                                                             src={getImageUrl(visit.visitor_photo)} 
-                                                            className="h-full w-full object-cover" 
+                                                            className="h-full w-full object-cover cursor-pointer hover:scale-110 transition-transform duration-300" 
+                                                            onClick={() => setPreviewImage(getImageUrl(visit.visitor_photo))}
                                                             alt="Visitor"
                                                             onError={(e) => { e.target.src = "/user.png"; }}
                                                         />
@@ -454,7 +466,8 @@ const VisitorManagement = () => {
                                     <div className="h-14 w-14 rounded-2xl overflow-hidden border border-orange-100 flex-shrink-0">
                                         <img 
                                             src={getImageUrl(visit.visitor_photo)} 
-                                            className="h-full w-full object-cover" 
+                                            className="h-full w-full object-cover cursor-pointer hover:scale-110 transition-transform duration-300" 
+                                            onClick={() => setPreviewImage(getImageUrl(visit.visitor_photo))}
                                             alt="Visitor"
                                             onError={(e) => { e.target.src = "/user.png"; }}
                                         />
@@ -588,6 +601,29 @@ const VisitorManagement = () => {
                             : <XCircle size={18} />
                         }
                         {toast.message}
+                    </div>
+                </div>
+            )}
+
+            {/* Image Preview Modal */}
+            {previewImage && (
+                <div 
+                    className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-[fadeIn_0.2s_ease]"
+                    onClick={() => setPreviewImage(null)}
+                >
+                    <div className="relative max-w-3xl max-h-[90vh] w-full flex justify-center items-center">
+                        <button 
+                            className="absolute -top-10 right-0 md:-right-10 text-white hover:text-gray-300 transition-colors bg-black/40 hover:bg-black/60 rounded-full p-1"
+                            onClick={() => setPreviewImage(null)}
+                        >
+                            <XCircle size={28} />
+                        </button>
+                        <img 
+                            src={previewImage} 
+                            alt="Preview" 
+                            className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl"
+                            onClick={(e) => e.stopPropagation()}
+                        />
                     </div>
                 </div>
             )}

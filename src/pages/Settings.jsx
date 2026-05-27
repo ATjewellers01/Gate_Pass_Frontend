@@ -157,7 +157,7 @@ const Settings = () => {
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm text-left">
             <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wider">
               <tr>
@@ -229,6 +229,65 @@ const Settings = () => {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Cards */}
+        <div className="md:hidden p-4 space-y-4 bg-gray-50/30">
+          {loading ? (
+            <div className="text-center py-8 text-gray-400">Loading users...</div>
+          ) : users.length === 0 ? (
+            <div className="text-center py-8 text-gray-400">No users found.</div>
+          ) : (
+            users.map((user) => (
+              <div key={user.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 space-y-3">
+                <div className="flex justify-between items-start gap-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold shrink-0 text-lg">
+                      {user.userName.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-800 text-sm">{user.userName}</p>
+                      <p className="text-[11px] font-bold text-orange-600 uppercase">{user.role || 'Staff'}</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={() => handleOpenModal(user)}
+                      className="p-1.5 text-orange-500 hover:bg-orange-50 rounded-lg transition-colors"
+                      title="Edit"
+                    >
+                      <Edit size={16} />
+                    </button>
+                    {userData?.phone !== user.phone && (
+                      <button
+                        onClick={() => handleDelete(user.id)}
+                        className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="text-sm space-y-1">
+                  <p className="text-gray-600 text-xs"><span className="font-semibold text-gray-800">Phone:</span> {user.phone || "—"}</p>
+                </div>
+
+                <div className="pt-2 border-t border-gray-50 flex flex-wrap gap-1">
+                  {user.pageAccess ? (
+                    user.pageAccess.split(",").map((page, i) => (
+                      <span key={i} className="px-2 py-1 bg-gray-100 text-gray-600 text-[10px] font-semibold rounded-md uppercase">
+                        {page.trim()}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-red-400 font-medium">No Access</span>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 

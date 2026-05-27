@@ -240,7 +240,7 @@ const HomePage = () => {
   ]
 
   return (
-    <div className="h-full max-h-[calc(100vh-4rem)] flex flex-col space-y-4 sm:space-y-6 animate-in fade-in duration-500">
+    <div className="flex flex-col space-y-4 sm:space-y-6 animate-in fade-in duration-500">
 
       {/* ── Stat Cards ── */}
       <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -319,7 +319,7 @@ const HomePage = () => {
       </div>
 
       {/* ── Visitor Table ── */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex-1 min-h-0 flex flex-col">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col">
         {/* Table header */}
         <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-gray-50">
           <h2 className="text-sm font-bold text-gray-800">
@@ -387,9 +387,9 @@ const HomePage = () => {
                       <span className="text-sm font-bold text-gray-800 truncate">{v.visitor_name || v.name || "—"}</span>
                       <Badge status={status} />
                     </div>
-                    <div className="text-xs text-gray-400 mt-0.5 truncate">
-                      {v.person_to_meet ? `Meeting: ${v.person_to_meet}` : ""}
-                      {v.mobile_number ? ` · ${v.mobile_number}` : ""}
+                    <div className="text-xs text-gray-500 mt-0.5 truncate flex items-center gap-2">
+                      <span className="font-semibold text-gray-700">To Meet: {v.person_to_meet || "—"}</span>
+                      {v.mobile_number && <span className="text-gray-400">· {v.mobile_number}</span>}
                     </div>
                     <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                       <span className="text-[11px] text-gray-400">{formatDate(v.timestamp || v.date_of_visit)}</span>
@@ -414,10 +414,10 @@ const HomePage = () => {
         </div>
 
         {/* ── Desktop: Table ── */}
-        <div className="hidden md:block flex-1 overflow-x-auto overflow-y-auto min-h-0">
-          <table className="w-full text-xs relative">
+        <div className="hidden md:block overflow-x-auto custom-scrollbar">
+          <table className="w-full min-w-[1000px] text-xs relative">
             <thead className="sticky top-0 z-10 bg-white">
-              <tr className="text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">
+              <tr className="text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 bg-gray-50">
                 <th className="px-6 py-3 text-left">Visitor</th>
                 <th className="px-4 py-3 text-left">Mobile</th>
                 <th className="px-4 py-3 text-left hidden lg:table-cell">Person to Meet</th>
