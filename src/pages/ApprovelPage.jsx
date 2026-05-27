@@ -92,10 +92,15 @@ const VisitorManagement = () => {
     }, [navigate, isReduxLoggedIn, userData]);
 
     const fetchAllData = async () => {
-        if (!username) return;
+        const currentUsername = userData?.user_name || userData?.userName || "";
+        const currentUserRole = userData?.role || "";
+        
+        // If not admin/guard and we don't have a username yet, return early
+        if (!currentUsername && currentUserRole?.toLowerCase() !== "admin" && currentUserRole?.toLowerCase() !== "guard") return;
+        
         setIsLoading(true);
         try {
-            const queryRole = (userRole?.toLowerCase() === "admin" || userRole?.toLowerCase() === "guard") ? "admin" : username;
+            const queryRole = (currentUserRole?.toLowerCase() === "admin" || currentUserRole?.toLowerCase() === "guard") ? "admin" : currentUsername;
             const res = await fetchVisitsForApprovalApi(queryRole);
             if (res.success) {
                 // Pending: approval_status is 'pending'
@@ -121,10 +126,10 @@ const VisitorManagement = () => {
     };
 
     useEffect(() => {
-        if (isLoggedIn) {
+        if (isLoggedIn && userData) {
             fetchAllData();
         }
-    }, [isLoggedIn, activeTab]);
+    }, [isLoggedIn, activeTab, userData]);
 
     const fetchPendingVisits = fetchAllData;
     const fetchApprovedVisits = fetchAllData;

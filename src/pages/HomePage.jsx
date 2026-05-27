@@ -133,7 +133,11 @@ const HomePage = () => {
 
   /* ─── fetch ─── */
   const fetchData = async () => {
-    const res = await fetchVisitsForApprovalApi("admin")
+    const queryRole = (userData?.role?.toLowerCase() === "admin" || userData?.role?.toLowerCase() === "guard") 
+      ? "admin" 
+      : userData?.user_name || "admin";
+      
+    const res = await fetchVisitsForApprovalApi(queryRole)
     if (res.success) setVisits(res.visits)
     setLoading(false)
   }
