@@ -414,7 +414,7 @@ const HomePage = () => {
         </div>
 
         {/* ── Desktop: Table ── */}
-        <div className="hidden md:block overflow-x-auto custom-scrollbar">
+        <div className="hidden md:block overflow-x-auto overflow-y-auto max-h-[400px] custom-scrollbar">
           <table className="w-full min-w-[1000px] text-xs relative">
             <thead className="sticky top-0 z-10 bg-white">
               <tr className="text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 bg-gray-50">
