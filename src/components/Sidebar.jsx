@@ -70,10 +70,7 @@ const Sidebar = ({ closeMenu }) => {
     return pageAccess.toLowerCase().includes(item.title.toLowerCase());
   });
 
-  // Strictly enforce that Guards only see the Gate Pass page
-  if (userData?.role?.toLowerCase() === "guard") {
-    filteredMenuItems = menuItems.filter(item => item.title === "Close Gate Pass");
-  }
+
 
   const handleLogout = () => {
     dispatch(logoutUser());  // clears Redux + sessionStorage
